@@ -3,6 +3,10 @@ node_modules/
 /.pnp
 .pnp.js
 
+# MongoDB
+**/data/
+**/logs/
+
 # Environment variables
 .env
 .env.local
