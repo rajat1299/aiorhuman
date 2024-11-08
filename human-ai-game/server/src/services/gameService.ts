@@ -919,10 +919,22 @@ export class GameService {
       process.env.ALLOWED_ORIGINS.split(',') : 
       ['*'];
 
+    // Use Socket.IO 4.x CORS configuration
     io.engine.on("headers", (headers: any) => {
-      headers["Access-Control-Allow-Origin"] = allowedOrigins.length === 1 ? 
-        allowedOrigins[0] : 
-        allowedOrigins.join(',');
+      const origin = allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins.join(',');
+      headers["Access-Control-Allow-Origin"] = origin;
+      headers["Access-Control-Allow-Credentials"] = true;
+    });
+
+    // Configure CORS for Socket.IO
+    const corsOptions = {
+      origin: allowedOrigins,
+      methods: ["GET", "POST"],
+      credentials: true
+    };
+
+    io.engine.on("initial_headers", (headers: any, req: any) => {
+      headers["Access-Control-Allow-Origin"] = req.headers.origin || allowedOrigins[0];
       headers["Access-Control-Allow-Credentials"] = true;
     });
   }
@@ -935,7 +947,6 @@ export class GameService {
     const origin = socket.handshake.headers.origin || '';
     
     if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      // Create a Player object from the socket and user
       const player: Player = {
         id: socket.id,
         userId: user._id,
@@ -943,10 +954,8 @@ export class GameService {
         isAI: false
       };
 
-      // Use the player object in event handlers
       socket.on('join-queue', () => this.handleJoinQueue(player));
       socket.on('leave-queue', () => this.handleLeaveQueue(socket.id));
-      // ... other event handlers
     }
   }
 }
