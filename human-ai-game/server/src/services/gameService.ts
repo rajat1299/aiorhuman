@@ -915,23 +915,26 @@ export class GameService {
 
   // Fix the CORS issue
   private setupCors(io: Server) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+    const allowedOrigins: string[] = process.env.ALLOWED_ORIGINS ? 
+      process.env.ALLOWED_ORIGINS.split(',') : 
+      ['*'];
+
     io.engine.on("headers", (headers: any) => {
-      if (Array.isArray(allowedOrigins)) {
-        headers["Access-Control-Allow-Origin"] = allowedOrigins.join(',');
-      } else {
-        headers["Access-Control-Allow-Origin"] = allowedOrigins;
-      }
+      headers["Access-Control-Allow-Origin"] = allowedOrigins.length === 1 ? 
+        allowedOrigins[0] : 
+        allowedOrigins.join(',');
       headers["Access-Control-Allow-Credentials"] = true;
     });
   }
 
   // Add type safety for socket events
   private setupSocketEvents(socket: Socket, user: IUser) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
-    const origin = socket.handshake.headers.origin;
+    const allowedOrigins: string[] = process.env.ALLOWED_ORIGINS ? 
+      process.env.ALLOWED_ORIGINS.split(',') : 
+      ['*'];
+    const origin = socket.handshake.headers.origin || '';
     
-    if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
       // Create a Player object from the socket and user
       const player: Player = {
         id: socket.id,
