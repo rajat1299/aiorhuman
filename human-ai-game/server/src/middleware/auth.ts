@@ -1,72 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { jwtConfig } from '../config/jwt';
-import User from '../models/User';
-import { AuthRequest } from '../types/express';
 
-export const verifyToken = async (token: string) => {
-  try {
-    const decoded = jwt.verify(token, jwtConfig.secret) as { userId: string };
-    const user = await User.findById(decoded.userId);
-    if (!user) {
-      return null;
-    }
-    
-    // Update last active timestamp
-    user.lastActive = new Date();
-    await user.save();
-    
-    return user;
-  } catch (error) {
-    return null;
-  }
-};
+export interface AuthRequest extends Request {
+  user?: any;
+}
 
-export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
+    const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
-      res.status(401).json({ error: 'No token provided' });
-      return;
+      throw new Error();
     }
 
-    const user = await verifyToken(token);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid token' });
-      return;
-    }
-
-    req.user = user;
-    req.token = token;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || '');
+    req.user = decoded;
     next();
-    return;
   } catch (error) {
-    console.error('Auth error:', error);
-    res.status(401).json({ error: 'Authentication failed' });
-    return;
-  }
-};
-
-export const socketAuthMiddleware = async (socket: any, next: (err?: Error) => void): Promise<void> => {
-  try {
-    const token = socket.handshake.auth.token;
-    if (!token) {
-      next(new Error('Authentication error'));
-      return;
-    }
-
-    const user = await verifyToken(token);
-    if (!user) {
-      next(new Error('Invalid token'));
-      return;
-    }
-
-    socket.user = user;
-    next();
-    return;
-  } catch (error) {
-    next(new Error('Authentication error'));
-    return;
+    res.status(401).send({ error: 'Please authenticate.' });
   }
 };

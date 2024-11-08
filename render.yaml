@@ -20,5 +20,5 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: ALLOWED_ORIGINS
-        value: https://your-frontend-url.vercel.app
+        value: "*"
     healthCheckPath: /health
