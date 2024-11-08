@@ -1,4 +1,4 @@
-import express, { Router, RequestHandler } from 'express';
+import express, { Router, RequestHandler, Request, Response } from 'express';
 import { autoLogin, getProfile } from '../controllers/authController';
 import { auth } from '../middleware/auth';
 import type { IUser } from '../models/User'; // Adjust import path as needed
@@ -20,5 +20,8 @@ router.options('/auto-login', (req, res) => {
 
 router.post('/auto-login', autoLogin as RequestHandler);
 router.get('/profile', auth, getProfile as RequestHandler);
+router.post('/register', async (req: Request, res: Response) => {
+  // ... your existing code
+});
 
 export default router;

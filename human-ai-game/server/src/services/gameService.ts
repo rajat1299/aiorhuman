@@ -900,4 +900,24 @@ export class GameService {
     const queueCount = this.getActiveQueueCount();
     this.io.emit('queue-status', { playersInQueue: queueCount });
   }
-} 
+
+  // Add these methods to the GameService class
+  public getPlayerSession(playerId: string): string | undefined {
+    return this.playerSessions.get(playerId);
+  }
+
+  public endGameByForfeit(sessionId: string, playerId: string) {
+    const session = this.activeSessions.get(sessionId);
+    if (session) {
+      this.handleGameEnd(session, 'abandoned', `${playerId} forfeited`);
+    }
+  }
+
+  // Fix the CORS issue
+  private setupCors(io: Server) {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+    io.engine.on("headers", (headers: any) => {
+      headers["Access-Control-Allow-Origin"] = allowedOrigins;
+    });
+  }
+}
