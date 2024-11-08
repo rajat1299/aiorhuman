@@ -917,7 +917,33 @@ export class GameService {
   private setupCors(io: Server) {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
     io.engine.on("headers", (headers: any) => {
-      headers["Access-Control-Allow-Origin"] = allowedOrigins;
+      if (Array.isArray(allowedOrigins)) {
+        headers["Access-Control-Allow-Origin"] = allowedOrigins.join(',');
+      } else {
+        headers["Access-Control-Allow-Origin"] = allowedOrigins;
+      }
+      headers["Access-Control-Allow-Credentials"] = true;
     });
+  }
+
+  // Add type safety for socket events
+  private setupSocketEvents(socket: Socket, user: IUser) {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+    const origin = socket.handshake.headers.origin;
+    
+    if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+      // Create a Player object from the socket and user
+      const player: Player = {
+        id: socket.id,
+        userId: user._id,
+        socket: socket,
+        isAI: false
+      };
+
+      // Use the player object in event handlers
+      socket.on('join-queue', () => this.handleJoinQueue(player));
+      socket.on('leave-queue', () => this.handleLeaveQueue(socket.id));
+      // ... other event handlers
+    }
   }
 }
