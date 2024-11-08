@@ -915,21 +915,14 @@ export class GameService {
 
   // Add type safety for socket events
   private setupSocketEvents(socket: Socket, user: IUser) {
-    const allowedOrigins: string[] = process.env.ALLOWED_ORIGINS ? 
-      process.env.ALLOWED_ORIGINS.split(',') : 
-      ['*'];
-    const origin = socket.handshake.headers.origin || '';
-    
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      const player: Player = {
-        id: socket.id,
-        userId: user._id,
-        socket: socket,
-        isAI: false
-      };
+    const player: Player = {
+      id: socket.id,
+      userId: user._id,
+      socket: socket,
+      isAI: false
+    };
 
-      socket.on('join-queue', () => this.handleJoinQueue(player));
-      socket.on('leave-queue', () => this.handleLeaveQueue(socket.id));
-    }
+    socket.on('join-queue', () => this.handleJoinQueue(player));
+    socket.on('leave-queue', () => this.handleLeaveQueue(socket.id));
   }
 }

@@ -32,9 +32,10 @@ app.use(requestLogger);
 // Create Socket.IO server with CORS config
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['*'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['*'],
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ["my-custom-header"],
   }
 });
 
