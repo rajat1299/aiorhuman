@@ -29,9 +29,13 @@ app.use(express.json());
 
 app.use(requestLogger);
 
-// Socket.IO setup with CORS
+// Create Socket.IO server with CORS config
 const io = new Server(httpServer, {
-  cors: corsOptions
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['*'],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 // Group all auth routes

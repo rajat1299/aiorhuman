@@ -913,36 +913,6 @@ export class GameService {
     }
   }
 
-  // Fix the CORS issue
-  private setupCors(io: Server) {
-    const allowedOrigins: string[] = process.env.ALLOWED_ORIGINS ? 
-      process.env.ALLOWED_ORIGINS.split(',') : 
-      ['*'];
-
-    // Configure Socket.IO with CORS options directly on server creation
-    const corsConfig = {
-      cors: {
-        origin: allowedOrigins,
-        methods: ["GET", "POST"],
-        allowedHeaders: ["my-custom-header"],
-        credentials: true
-      },
-      allowEIO3: true
-    };
-
-    // Apply CORS configuration directly to io instance
-    Object.assign(io, { _corsConfig: corsConfig });
-
-    // Set up CORS headers
-    io.engine.on("headers", (headers: any, req: any) => {
-      const requestOrigin = req.headers.origin || allowedOrigins[0];
-      if (allowedOrigins.includes('*') || allowedOrigins.includes(requestOrigin)) {
-        headers["Access-Control-Allow-Origin"] = requestOrigin;
-        headers["Access-Control-Allow-Credentials"] = true;
-      }
-    });
-  }
-
   // Add type safety for socket events
   private setupSocketEvents(socket: Socket, user: IUser) {
     const allowedOrigins: string[] = process.env.ALLOWED_ORIGINS ? 
