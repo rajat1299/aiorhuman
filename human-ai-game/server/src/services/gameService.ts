@@ -919,22 +919,22 @@ export class GameService {
       process.env.ALLOWED_ORIGINS.split(',') : 
       ['*'];
 
-    // Use Socket.IO 4.x CORS configuration
+    // Configure Socket.IO with CORS options
+    const corsConfig = {
+      cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST"],
+        credentials: true
+      }
+    };
+
+    // Apply CORS configuration
+    Object.assign(io, corsConfig);
+
+    // Handle headers for CORS
     io.engine.on("headers", (headers: any) => {
       const origin = allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins.join(',');
       headers["Access-Control-Allow-Origin"] = origin;
-      headers["Access-Control-Allow-Credentials"] = true;
-    });
-
-    // Configure CORS for Socket.IO
-    const corsOptions = {
-      origin: allowedOrigins,
-      methods: ["GET", "POST"],
-      credentials: true
-    };
-
-    io.engine.on("initial_headers", (headers: any, req: any) => {
-      headers["Access-Control-Allow-Origin"] = req.headers.origin || allowedOrigins[0];
       headers["Access-Control-Allow-Credentials"] = true;
     });
   }
