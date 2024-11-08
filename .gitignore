@@ -4,9 +4,9 @@ node_modules/
 .pnp.js
 
 # MongoDB
-/data/
-/logs/
-/db/
+**/data/
+**/logs/
+**/db/
 
 # Environment variables
 .env
