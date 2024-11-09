@@ -251,6 +251,12 @@ export class GameService {
         return;
       }
 
+      // Now sessionId is definitely a string
+      this.io.to(sessionId).emit('message', {
+        content,
+        senderId: player.userId.toString()
+      });
+
       // Don't allow messages if either player has made a guess
       if (session.player1Guess || session.player2Guess) {
         console.log('Guessing phase started, no more messages allowed');
@@ -322,17 +328,23 @@ export class GameService {
   private async handleGameEnd(session: GameSessionWithDoc, status: 'completed' | 'abandoned', reason: string) {
     console.log(`Ending game session ${session.sessionId}, status: ${status}, reason: ${reason}`);
     
+    const sessionId = session.sessionId;
+    if (!sessionId) {
+      console.error('Session ID is undefined');
+      return;
+    }
+
     session.status = status;
     session.endTime = new Date();
     await session.save();
 
-    this.io.to(session.sessionId).emit('game-ended', {
+    this.io.to(sessionId).emit('game-ended', {
       reason,
       status,
-      sessionId: session.sessionId
+      sessionId
     });
 
-    this.activeSessions.delete(session.sessionId);
+    this.activeSessions.delete(sessionId);
   }
 
   private async generateAIResponse(messages: IMessage[]): Promise<string> {
@@ -387,6 +399,10 @@ export class GameService {
   private async createGameSession(player1: Player, player2: Player) {
     try {
       const sessionId = new mongoose.Types.ObjectId().toString();
+      if (!sessionId) {
+        throw new Error('Failed to generate session ID');
+      }
+
       console.log(`Creating game session: ${sessionId}`);
 
       const session = new GameSession({
