@@ -18,7 +18,7 @@ const httpServer = createServer(app);
 // CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://aiorhuman-six.vercel.app'] 
+    ? ['https://aiorhuman-18gpekkme-rajat-tiwaris-projects.vercel.app'] 
     : ['http://localhost:5173', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT'],
   credentials: true
@@ -32,10 +32,11 @@ app.use(requestLogger);
 // Create Socket.IO server with CORS config
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['*'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || 
+      ['https://aiorhuman-18gpekkme-rajat-tiwaris-projects.vercel.app'],
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["my-custom-header"],
+    allowedHeaders: ["my-custom-header", "Content-Type", "Authorization"],
   }
 });
 
