@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { User } from '../types/user';
 
@@ -11,6 +11,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -25,25 +27,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const loadUser = async (token: string) => {
+  const loadUser = useCallback(async (token: string) => {
     try {
-      const response = await axios.get('http://localhost:5001/auth/profile', {
+      const response = await axios.get(`${API_URL}/auth/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-
-      if (response.data.success) {
-        setUser(response.data.user);
-      }
+      setUser(response.data);
     } catch (error) {
       console.error('Failed to load user:', error);
-      localStorage.removeItem('token');
-      setUser(null);
-    } finally {
-      setLoading(false);
+      throw error;
     }
-  };
+  }, []);
 
   const login = async (token: string): Promise<boolean> => {
     try {
