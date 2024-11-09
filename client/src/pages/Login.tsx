@@ -11,7 +11,11 @@ const Login: React.FC = () => {
 
   const handleAutoLogin = async () => {
     try {
-      const response = await axios.post(`${API_URL}/auth/auto-login`);
+      const response = await axios.post(`${API_URL}/auth/auto-login`, {}, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (response.data.success && response.data.token) {
         await login(response.data.token);

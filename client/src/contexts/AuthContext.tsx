@@ -29,17 +29,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUser = useCallback(async (token: string) => {
     try {
-      const response = await axios.get(`${API_URL}/auth/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      const response = await axios.get(`${API_URL}/auth/profile`);
       setUser(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Failed to load user:', error);
       localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
       setLoading(false);
       throw error;
     }
