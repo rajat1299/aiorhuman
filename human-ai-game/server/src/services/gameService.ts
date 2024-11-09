@@ -158,25 +158,30 @@ export class GameService {
 
     // Don't end the session immediately on disconnect
     const sessionId = this.playerSessions.get(player.id);
-    if (sessionId) {
-      const session = this.activeSessions.get(sessionId);
-      if (session) {
-        // Keep track of the last disconnection time
-        const disconnectTime = Date.now();
+    if (!sessionId) {
+      return;
+    }
+
+    const session = this.activeSessions.get(sessionId);
+    if (session) {
+      // Keep track of the last disconnection time
+      const disconnectTime = Date.now();
+      
+      // Give time for potential reconnection
+      setTimeout(async () => {
+        // Recheck sessionId exists
+        if (!sessionId) return;
         
-        // Give time for potential reconnection
-        setTimeout(async () => {
-          const currentSession = this.activeSessions.get(sessionId);
-          // Only end the session if it's still active and no reconnection happened
-          if (currentSession && currentSession.status === 'active' && 
-              !this.playerSockets.has(player.userId.toString())) {
-            console.log(`Session ${sessionId} abandoned after timeout`);
-            this.handleGameEnd(session, 'abandoned', `${player.id} disconnected`);
-            this.userSessions.delete(player.userId.toString());
-            this.playerSessions.delete(player.id);
-          }
-        }, 10000); // 10 second grace period for reconnection
-      }
+        const currentSession = this.activeSessions.get(sessionId);
+        // Only end the session if it's still active and no reconnection happened
+        if (currentSession && currentSession.status === 'active' && 
+            !this.playerSockets.has(player.userId.toString())) {
+          console.log(`Session ${sessionId} abandoned after timeout`);
+          this.handleGameEnd(session, 'abandoned', `${player.id} disconnected`);
+          this.userSessions.delete(player.userId.toString());
+          this.playerSessions.delete(player.id);
+        }
+      }, 10000); // 10 second grace period for reconnection
     }
   }
 
@@ -684,14 +689,21 @@ export class GameService {
 
   private async handleAIResponse(session: IGameSession, player: Player) {
     try {
+      // Add null check for sessionId at the start
+      const sessionId = session.sessionId;
+      if (!sessionId) {
+        console.error('Session ID is undefined');
+        return;
+      }
+
       // Check if session still exists and is active
       const currentSession = await GameSession.findOne({ 
-        sessionId: session.sessionId,
+        sessionId,
         status: 'active'
       });
 
       if (!currentSession) {
-        console.warn(`Session ${session.sessionId} no longer active`);
+        console.warn(`Session ${sessionId} no longer active`);
         return;
       }
 
@@ -714,8 +726,8 @@ export class GameService {
       const initialDelay = 2000 + Math.random() * 2000;
       await new Promise(resolve => setTimeout(resolve, initialDelay));
 
-      // Show typing indicator
-      this.io.to(session.sessionId).emit('opponent-typing');
+      // Show typing indicator - now safe to use sessionId
+      this.io.to(sessionId).emit('opponent-typing');
 
       const messageHistory: ChatCompletionMessageParam[] = currentSession.messages.map(msg => ({
         role: msg.senderId === session.player2.userId.toString() ? 'assistant' : 'user',
