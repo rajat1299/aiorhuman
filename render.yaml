@@ -20,5 +20,5 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: ALLOWED_ORIGINS
-        value: "https://aiorhuman-18gpekkme-rajat-tiwaris-projects.vercel.app"
+        value: "https://aiorhuman-six.vercel.app"
     healthCheckPath: /health
