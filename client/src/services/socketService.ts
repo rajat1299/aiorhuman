@@ -1,9 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { getToken } from './authService';
 
-const SOCKET_URL = process.env.NODE_ENV === 'production'
-  ? 'https://your-backend-domain.com'
-  : 'http://localhost:5001';
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001';
 
 export const initSocket = (token: string) => {
   const socket = io(SOCKET_URL, {

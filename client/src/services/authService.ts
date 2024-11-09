@@ -18,13 +18,15 @@ interface AuthResponse {
   user: User;
 }
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+
 class AuthService {
   private token: string | null = null;
   private user: User | null = null;
 
   async autoLogin(): Promise<boolean> {
     try {
-      const response = await fetch('http://localhost:5001/auth/auto-login', {
+      const response = await fetch(`${API_URL}/auth/auto-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
