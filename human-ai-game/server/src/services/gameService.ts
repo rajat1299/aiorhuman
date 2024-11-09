@@ -455,16 +455,34 @@ export class GameService {
         sessionId = this.playerSessions.get(player.id);
       }
 
+      // Early return if no session found
       if (!sessionId) {
         console.warn(`No session found for player ${player.id}`);
         return;
       }
 
+      // Now TypeScript knows sessionId is definitely a string
       const session = await GameSession.findOne({ sessionId });
       if (!session) {
         console.warn(`Session not found: ${sessionId}`);
         return;
       }
+
+      // Use sessionId safely now that we know it exists
+      this.io.to(sessionId).emit('waiting-for-result', {
+        message: 'All guesses are in! Revealing results...'
+      });
+
+      // Clean up session
+      setTimeout(() => {
+        if (sessionId) { // TypeScript needs this check
+          this.activeSessions.delete(sessionId);
+          this.playerSessions.delete(player.id);
+          if (session.player2.isAI) {
+            this.playerSessions.delete(session.player2.userId.toString());
+          }
+        }
+      }, 5000);
 
       console.log(`Processing guess from player ${player.id}: ${guess}`);
 
