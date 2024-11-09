@@ -292,6 +292,13 @@ export class GameService {
 
   private async sendMessage(session: IGameSession, player: Player, content: string) {
     try {
+      // Add null check for sessionId
+      const sessionId = session.sessionId;
+      if (!sessionId) {
+        console.error('Session ID is undefined');
+        return;
+      }
+
       const message = {
         id: new mongoose.Types.ObjectId().toString(),
         content,
@@ -302,7 +309,8 @@ export class GameService {
       session.messages.push(message);
       await session.save();
 
-      this.io.to(session.sessionId).emit('message', message);
+      // Now we can safely use sessionId
+      this.io.to(sessionId).emit('message', message);
 
       // If the sender is a human player, trigger AI response if opponent is AI
       if (!player.isAI) {
