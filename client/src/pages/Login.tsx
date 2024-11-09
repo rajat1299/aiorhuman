@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+
 const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleAutoLogin = async () => {
     try {
-      const response = await axios.post('http://localhost:5001/auth/auto-login');
+      const response = await axios.post(`${API_URL}/auth/auto-login`);
       
       if (response.data.success && response.data.token) {
         await login(response.data.token);
