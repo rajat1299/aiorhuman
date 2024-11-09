@@ -18,7 +18,7 @@ const httpServer = createServer(app);
 // CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend-domain.vercel.app'] 
+    ? ['https://aiorhuman-six.vercel.app'] 
     : ['http://localhost:5173', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT'],
   credentials: true
