@@ -31,12 +31,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await axios.get(`${API_URL}/auth/profile`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
       setUser(response.data);
+      setLoading(false);
     } catch (error) {
       console.error('Failed to load user:', error);
+      localStorage.removeItem('token');
+      setLoading(false);
       throw error;
     }
   }, []);
@@ -44,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (token: string): Promise<boolean> => {
     try {
       localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       await loadUser(token);
       return true;
     } catch (error) {
