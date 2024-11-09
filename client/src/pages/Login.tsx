@@ -1,9 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+import api from '../services/axiosConfig';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
@@ -11,11 +9,7 @@ const Login: React.FC = () => {
 
   const handleAutoLogin = async () => {
     try {
-      const response = await axios.post(`${API_URL}/auth/auto-login`, {}, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.post('/auth/auto-login');
       
       if (response.data.success && response.data.token) {
         await login(response.data.token);
