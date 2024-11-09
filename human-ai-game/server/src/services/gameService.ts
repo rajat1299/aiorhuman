@@ -484,22 +484,6 @@ export class GameService {
         return;
       }
 
-      // Use sessionId safely now that we know it exists
-      this.io.to(sessionId).emit('waiting-for-result', {
-        message: 'All guesses are in! Revealing results...'
-      });
-
-      // Clean up session
-      setTimeout(() => {
-        if (sessionId) { // TypeScript needs this check
-          this.activeSessions.delete(sessionId);
-          this.playerSessions.delete(player.id);
-          if (session.player2.isAI) {
-            this.playerSessions.delete(session.player2.userId.toString());
-          }
-        }
-      }, 5000);
-
       console.log(`Processing guess from player ${player.id}: ${guess}`);
 
       // Store the player's guess
