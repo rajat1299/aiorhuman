@@ -158,19 +158,20 @@ export class GameService {
     const session = this.activeSessions.get(sessionId);
     if (session) {
       const disconnectTime = Date.now();
-      
+      const definedSessionId = sessionId; // TypeScript now knows it's a string
+
       setTimeout(async () => {
-        if (!sessionId) return;
+        if (!definedSessionId) return;
         
-        const currentSession = this.activeSessions.get(sessionId);
+        const currentSession = this.activeSessions.get(definedSessionId);
         if (currentSession && currentSession.status === 'active' && 
             !this.playerSockets.has(player.userId.toString())) {
-          console.log(`Session ${sessionId} abandoned after timeout`);
+          console.log(`Session ${definedSessionId} abandoned after timeout`);
           this.handleGameEnd(session, 'abandoned', `${player.id} disconnected`);
           this.userSessions.delete(player.userId.toString());
           this.playerSessions.delete(player.id);
         }
-      }, 10000);
+      }, 10000); // 10 second grace period for reconnection
     }
   }
 
@@ -186,35 +187,43 @@ export class GameService {
     this.waitingQueue.push(queuedPlayer);
     player.socket.emit('queue-joined');
 
+    // Start matchmaking process
     setTimeout(async () => {
-      if (!queuedPlayer.searching) return;
+      if (!queuedPlayer.searching) return; // Player already matched
 
+      // Try to find human opponent first
       const opponent = this.findHumanOpponent(queuedPlayer);
       
       if (opponent) {
+        // Found human opponent
         queuedPlayer.searching = false;
         opponent.searching = false;
         
+        // Remove both players from queue
         this.waitingQueue = this.waitingQueue.filter(p => 
           p.id !== queuedPlayer.id && p.id !== opponent.id
         );
 
+        // Create game session
         await this.createGameSession(queuedPlayer, opponent);
       } else {
+        // No human opponent found, create AI match
         queuedPlayer.searching = false;
         this.waitingQueue = this.waitingQueue.filter(p => p.id !== queuedPlayer.id);
         
         const aiPlayer = await this.createAIPlayer();
         await this.createGameSession(queuedPlayer, aiPlayer);
       }
-    }, 10000);
+    }, 10000); // 10 second matchmaking window
   }
 
   private findHumanOpponent(player: QueuedPlayer): QueuedPlayer | null {
+    // Sort queue by wait time
     const sortedQueue = this.waitingQueue
       .filter(p => p.id !== player.id && p.searching)
       .sort((a, b) => a.joinTime - b.joinTime);
 
+    // Find first available opponent
     return sortedQueue[0] || null;
   }
 
@@ -230,17 +239,15 @@ export class GameService {
         return;
       }
 
-      const session = await GameSession.findOne({ sessionId });
+      const definedSessionId = sessionId; // TypeScript now knows it's a string
+
+      const session = await GameSession.findOne({ sessionId: definedSessionId });
       if (!session || session.status !== 'active') {
-        console.warn(`Invalid session state for ${sessionId}`);
+        console.warn(`Invalid session state for ${definedSessionId}`);
         return;
       }
 
-      this.io.to(sessionId).emit('message', {
-        content,
-        senderId: player.userId.toString()
-      });
-
+      // Don't allow messages if either player has made a guess
       if (session.player1Guess || session.player2Guess) {
         console.log('Guessing phase started, no more messages allowed');
         return;
@@ -248,9 +255,11 @@ export class GameService {
 
       await this.sendMessage(session, player, content);
 
+      // Check if this is within the message limit range for AI games
       if (session.player2.isAI && session.messages.length >= 8) {
         console.log('Reached message limit, initiating guessing phase...');
         
+        // First have AI make its guess
         const aiPlayer: Player = {
           id: session.player2.userId.toString(),
           userId: session.player2.userId,
@@ -261,7 +270,8 @@ export class GameService {
         console.log('AI making its guess...');
         await this.handleGuess(aiPlayer, 'human');
 
-        this.io.to(sessionId).emit('opponent-guess-made', {
+        // Then notify the human player it's their turn
+        this.io.to(definedSessionId).emit('opponent-guess-made', {
           message: "Your opponent has made their guess. Your turn!"
         });
       }
@@ -290,6 +300,7 @@ export class GameService {
 
       this.io.to(sessionId).emit('message', message);
 
+      // If the sender is a human player, trigger AI response if opponent is AI
       if (!player.isAI) {
         const opponent = player.userId.toString() === session.player1.userId.toString() 
           ? session.player2 
@@ -334,11 +345,13 @@ export class GameService {
 
   private async generateAIResponse(messages: IMessage[]): Promise<string> {
     try {
+      // Convert messages to a format GPT can understand
       const messageHistory = messages.map(msg => ({
         role: "user",
         content: msg.content
       }));
 
+      // Add system message to set the context
       messageHistory.unshift({
         role: "system",
         content: `You are participating in a game where a human is trying to determine if you are human or AI. 
@@ -349,10 +362,10 @@ export class GameService {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: messageHistory as ChatCompletionMessageParam[],
-        max_tokens: 60,
-        temperature: 0.9,
-        presence_penalty: 0.6,
-        frequency_penalty: 0.6
+        max_tokens: 60,  // Keep responses concise
+        temperature: 0.9,  // Add some randomness
+        presence_penalty: 0.6,  // Encourage diverse responses
+        frequency_penalty: 0.6  // Discourage repetition
       });
 
       return completion.choices[0].message.content || "I'm not sure how to respond to that.";
@@ -383,7 +396,8 @@ export class GameService {
     try {
       const sessionId = new mongoose.Types.ObjectId().toString();
       if (!sessionId) {
-        throw new Error('Failed to generate session ID');
+        console.error('Failed to generate session ID');
+        return;
       }
 
       console.log(`Creating game session: ${sessionId}`);
@@ -404,19 +418,23 @@ export class GameService {
       await session.save();
       console.log('Game session saved to database');
 
+      // Remove players from waiting queue
       this.waitingQueue = this.waitingQueue.filter(p => p.id !== player1.id && p.id !== player2.id);
 
+      // Store session mappings
       this.playerSessions.set(player1.id, sessionId);
       this.playerSessions.set(player2.id, sessionId);
       this.userSessions.set(player1.userId.toString(), sessionId);
       this.userSessions.set(player2.userId.toString(), sessionId);
       this.activeSessions.set(sessionId, session);
 
+      // Join socket room
       player1.socket.join(sessionId);
       if (!player2.isAI) {
         player2.socket.join(sessionId);
       }
 
+      // Emit game started event
       this.io.to(sessionId).emit('game-started', {
         sessionId,
         opponent: {
@@ -454,17 +472,21 @@ export class GameService {
         return;
       }
 
-      const session = await GameSession.findOne({ sessionId });
+      const definedSessionId = sessionId; // TypeScript now knows it's a string
+
+      const session = await GameSession.findOne({ sessionId: definedSessionId });
       if (!session) {
-        console.warn(`Session not found: ${sessionId}`);
+        console.warn(`Session not found: ${definedSessionId}`);
         return;
       }
 
       console.log(`Processing guess from player ${player.id}: ${guess}`);
 
+      // Store the player's guess
       if (player.userId.toString() === session.player1.userId.toString()) {
         session.player1Guess = guess;
         
+        // If human player guesses first, trigger AI guess
         if (session.player2.isAI && !session.player2Guess) {
           console.log('Human guessed first, triggering AI guess');
           const aiPlayer: Player = {
@@ -474,6 +496,7 @@ export class GameService {
             isAI: true
           };
           
+          // Add delay before AI makes its guess
           setTimeout(async () => {
             await this.handleGuess(aiPlayer, 'human');
           }, 2000);
@@ -488,24 +511,28 @@ export class GameService {
         player2Guess: session.player2Guess
       });
 
+      // Check if both players have made their guesses
       if (session.player1Guess && session.player2Guess) {
         console.log('Both players have made their guesses, preparing results...');
         
-        this.io.to(sessionId).emit('waiting-for-result', {
+        this.io.to(definedSessionId).emit('waiting-for-result', {
           message: 'All guesses are in! Revealing results...'
         });
 
+        // Add delay before showing results
         setTimeout(async () => {
           try {
             const player1Result = this.calculatePlayerResult(session, session.player1.userId.toString());
             const player2Result = this.calculatePlayerResult(session, session.player2.userId.toString());
 
+            // Update session status
             session.status = 'completed';
             session.endTime = new Date();
             session.player1Points = player1Result.score.total;
             session.player2Points = player2Result.score.total;
             await session.save();
 
+            // Prepare game results
             const gameResults = {
               player1: {
                 userId: session.player1.userId,
@@ -524,10 +551,12 @@ export class GameService {
               }
             };
 
-            this.io.to(sessionId).emit('game-result', gameResults);
+            console.log('Emitting game results:', gameResults);
+            this.io.to(definedSessionId).emit('game-result', gameResults);
 
+            // Clean up session
             setTimeout(() => {
-              this.activeSessions.delete(sessionId);
+              this.activeSessions.delete(definedSessionId);
               this.playerSessions.delete(player.id);
               if (session.player2.isAI) {
                 this.playerSessions.delete(session.player2.userId.toString());
@@ -548,18 +577,22 @@ export class GameService {
     const playerGuess = isPlayer1 ? session.player1Guess : session.player2Guess;
     const opponentIsAI = isPlayer1 ? session.player2.isAI : session.player1.isAI;
     
+    // Determine if guess is correct
     const isCorrect = (playerGuess === 'ai' && opponentIsAI) || 
                      (playerGuess === 'human' && !opponentIsAI);
 
+    // Calculate game metrics
     const gameDuration = Math.floor((Date.now() - session.startTime.getTime()) / 1000);
     const messageCount = session.messages.length;
     const averageResponseTime = this.calculateAverageResponseTime(session.messages);
 
+    // Determine if player successfully deceived opponent
     const opponentGuess = isPlayer1 ? session.player2Guess : session.player1Guess;
     const deceptionSuccess = opponentGuess !== (isPlayer1 ? 
       (session.player1.isAI ? 'ai' : 'human') : 
       (session.player2.isAI ? 'ai' : 'human'));
 
+    // Calculate score
     const scoringFactors = {
       isCorrectGuess: isCorrect,
       messageCount,
@@ -644,44 +677,53 @@ export class GameService {
         return;
       }
 
+      const definedSessionId = sessionId; // TypeScript now knows it's a string
+
+      // Check if session still exists and is active
       const currentSession = await GameSession.findOne({ 
-        sessionId,
+        sessionId: definedSessionId,
         status: 'active'
       });
 
       if (!currentSession) {
-        console.warn(`Session ${sessionId} no longer active`);
+        console.warn(`Session ${definedSessionId} no longer active`);
         return;
       }
 
+      // Only proceed if under max message limit
       if (currentSession.messages.length >= 10) {
         console.log('Maximum message limit reached');
         return;
       }
 
+      // Check if in flexible ending range (8-10 messages)
       if (currentSession.messages.length >= 8) {
-        const shouldRespond = Math.random() < 0.4;
+        const shouldRespond = Math.random() < 0.4; // 40% chance to respond
         if (!shouldRespond) {
           console.log('Randomly ending chat in flexible range');
           return;
         }
       }
 
+      // Rest of AI response logic...
       const initialDelay = 2000 + Math.random() * 2000;
       await new Promise(resolve => setTimeout(resolve, initialDelay));
 
-      this.io.to(sessionId).emit('opponent-typing');
+      // Show typing indicator
+      this.io.to(definedSessionId).emit('opponent-typing');
 
       const messageHistory: ChatCompletionMessageParam[] = currentSession.messages.map(msg => ({
         role: msg.senderId === session.player2.userId.toString() ? 'assistant' : 'user',
         content: msg.content
       }));
 
+      // Analyze last message
       const lastMessage = currentSession.messages[currentSession.messages.length - 1];
       const isSimpleGreeting = /^(hey|hi|hello|yo|sup|heyy|hii|hello there|hi there|hey there)$/i.test(lastMessage.content.trim());
       const isAccusation = /\b(ai|bot|robot|artificial|computer|machine)\b/i.test(lastMessage.content.toLowerCase());
       const isQuestion = lastMessage.content.includes('?');
 
+      // Select personality for this session based on sessionId
       const personalities = [
         {
           type: "casual-gamer",
@@ -792,6 +834,7 @@ export class GameService {
         });
       }
 
+      // Generate response
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: messageHistory,
@@ -804,6 +847,7 @@ export class GameService {
 
       let response = completion.choices[0]?.message?.content;
       if (response) {
+        // Add occasional typos (30% chance)
         if (Math.random() < 0.3) {
           const words = response.split(' ');
           const randomIndex = Math.floor(Math.random() * words.length);
@@ -813,12 +857,13 @@ export class GameService {
           response = words.join(' ');
         }
 
+        // Calculate realistic typing delays
         const messageLength = response.length;
-        const typingSpeed = 80 + Math.random() * 40;
+        const typingSpeed = 80 + Math.random() * 40; // Variable typing speed
         const typingTime = messageLength / typingSpeed * 1000;
         const thinkingTime = isSimpleGreeting ? 
-          (Math.random() * 500) : 
-          (Math.random() * 2000);
+          (Math.random() * 500) : // Quick for greetings
+          (Math.random() * 2000);  // Longer for normal messages
         
         const totalDelay = typingTime + thinkingTime;
 
@@ -828,8 +873,9 @@ export class GameService {
         }, totalDelay);
       }
 
-      if (currentSession.messages.length === 7) {
-        this.io.to(session.sessionId).emit('message-limit-warning', {
+      // After generating and sending the response, check message count again
+      if (currentSession.messages.length === 7) { // 7 because we just sent one more
+        this.io.to(definedSessionId).emit('message-limit-warning', {
           message: "Next message will be the last before guessing phase."
         });
       }
@@ -842,14 +888,17 @@ export class GameService {
     if (word.length < 3) return word;
     
     const typoTypes = [
+      // Swap adjacent characters
       (w: string) => {
         const i = Math.floor(Math.random() * (w.length - 1));
         return w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2);
       },
+      // Double character
       (w: string) => {
         const i = Math.floor(Math.random() * w.length);
         return w.slice(0, i) + w[i] + w.slice(i);
       },
+      // Miss character
       (w: string) => {
         const i = Math.floor(Math.random() * w.length);
         return w.slice(0, i) + w.slice(i + 1);
