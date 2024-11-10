@@ -1,27 +1,57 @@
-import express, { Router, RequestHandler, Request, Response } from 'express';
-import { autoLogin, getProfile } from '../controllers/authController';
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../middleware/auth';
-import type { IUser } from '../models/User'; // Adjust import path as needed
 
 const router = express.Router();
 
-// Define the AuthRequest type
-interface AuthRequest extends Request {
-  user?: IUser;
-}
+router.post('/auto-login', async (req, res) => {
+  try {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not set');
+    }
 
-// Add OPTIONS handler for preflight requests
-router.options('/auto-login', (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
-  res.header('Access-Control-Allow-Methods', 'POST');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.status(204).send();
+    console.log('Auto-login request received');
+    const username = `Player_${Math.random().toString(36).substr(2, 6)}`;
+    const userId = uuidv4();
+
+    const token = jwt.sign(
+      { id: userId, username },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log('Generated username:', username);
+    res.json({ 
+      success: true, 
+      token, 
+      user: { 
+        id: userId, 
+        username,
+        stats: {
+          totalGames: 0,
+          gamesWon: 0,
+          correctGuesses: 0,
+          successfulDeceptions: 0,
+          winRate: 0,
+          totalPoints: 0,
+          averagePoints: 0
+        }
+      } 
+    });
+  } catch (error) {
+    console.error('Auto-login error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
 });
 
-router.post('/auto-login', autoLogin as RequestHandler);
-router.get('/profile', auth, getProfile as RequestHandler);
-router.post('/register', async (req: Request, res: Response) => {
-  // ... your existing code
+router.get('/profile', auth, (req, res) => {
+  try {
+    res.json(req.user);
+  } catch (error) {
+    console.error('Profile error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 export default router;
