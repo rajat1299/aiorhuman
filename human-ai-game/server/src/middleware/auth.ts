@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export interface AuthRequest extends Request {
@@ -20,7 +20,7 @@ export const verifyToken = (token: string): any => {
 
 export const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void | Response> => {
   try {
-    const authHeader = req.header('Authorization');
+    const authHeader = req.headers.authorization;
     if (!authHeader) {
       console.log('No Authorization header');
       return res.status(401).json({ error: 'No Authorization header' });

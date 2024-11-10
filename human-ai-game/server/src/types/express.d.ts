@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction, Router, RequestHandler } from 'express';
+import * as express from 'express';
 import { IUser } from '../models/User';
 
 declare global {
@@ -12,7 +12,7 @@ declare global {
   }
 }
 
-export interface AuthRequest extends Request {
+export interface AuthRequest extends express.Request {
   user?: IUser;
   token?: string;
   body: {
@@ -21,5 +21,10 @@ export interface AuthRequest extends Request {
   header(name: string): string | undefined;
 }
 
-// Don't export types from express directly
-// Instead, use them from the 'express' package 
+export type {
+  Request,
+  Response,
+  NextFunction,
+  Router,
+  RequestHandler
+} from 'express';
