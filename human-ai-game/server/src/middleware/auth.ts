@@ -18,7 +18,7 @@ export const verifyToken = (token: string): any => {
   }
 };
 
-export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void | Response> => {
   try {
     const authHeader = req.header('Authorization');
     if (!authHeader) {
@@ -39,10 +39,10 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
     }
 
     req.user = decoded;
-    next();
+    return next();
   } catch (error) {
     console.error('Authentication failed:', error);
-    res.status(401).json({ error: 'Please authenticate.' });
+    return res.status(401).json({ error: 'Please authenticate.' });
   }
 };
 
