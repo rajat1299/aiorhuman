@@ -11,7 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "types": ["node", "express", "socket.io", "uuid", "dotenv"]
+    "types": ["node", "express", "socket.io", "dotenv"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
