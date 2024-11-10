@@ -5,9 +5,8 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import { config } from 'dotenv';
 import { GameService } from './services/gameService';
-import { verifyToken, authMiddleware } from './middleware/auth';
+import { verifyToken, authMiddleware, AuthRequest } from './middleware/auth';
 import { autoLogin, getProfile, updateProfile } from './controllers/authController';
-import { AuthRequest } from './types/express';
 import { requestLogger } from './middleware/logging';
 
 config();

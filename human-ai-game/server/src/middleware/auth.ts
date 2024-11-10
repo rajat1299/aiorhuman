@@ -1,8 +1,12 @@
-import express, { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export interface AuthRequest extends Request {
+// Extend Request type
+interface AuthRequest extends Request {
   user?: any;
+  headers: {
+    authorization?: string;
+  };
 }
 
 export const verifyToken = (token: string): any => {
@@ -46,4 +50,5 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
   }
 };
 
+export { AuthRequest };
 export const authMiddleware = auth;

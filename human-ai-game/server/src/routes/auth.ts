@@ -2,12 +2,15 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../middleware/auth';
-import { AuthRequest } from '../types/express';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 
 const router = express.Router();
 
-router.post('/auto-login', async (req: AuthRequest, res: Response) => {
+interface AuthRequest extends Request {
+  user?: any;
+}
+
+router.post('/auto-login', async (req: Request, res: Response) => {
   try {
     if (!process.env.JWT_SECRET) {
       throw new Error('JWT_SECRET is not set');
