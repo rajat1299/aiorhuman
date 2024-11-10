@@ -1,11 +1,12 @@
-import express from 'express';
+import express, { Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../middleware/auth';
+import { AuthRequest } from '../types/express';
 
 const router = express.Router();
 
-router.post('/auto-login', async (req, res) => {
+router.post('/auto-login', async (req: AuthRequest, res: Response) => {
   try {
     if (!process.env.JWT_SECRET) {
       throw new Error('JWT_SECRET is not set');
@@ -45,7 +46,7 @@ router.post('/auto-login', async (req, res) => {
   }
 });
 
-router.get('/profile', auth, (req, res) => {
+router.get('/profile', auth, (req: AuthRequest, res: Response) => {
   try {
     res.json(req.user);
   } catch (error) {

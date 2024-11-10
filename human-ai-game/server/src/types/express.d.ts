@@ -6,6 +6,8 @@ declare global {
     interface Request {
       user?: IUser;
       token?: string;
+      body: any;
+      header(name: string): string | undefined;
     }
   }
 }
@@ -13,4 +15,8 @@ declare global {
 export interface AuthRequest extends Request {
   user?: IUser;
   token?: string;
+  body: {
+    [key: string]: any;
+  };
+  header(name: string): string | undefined;
 } 
