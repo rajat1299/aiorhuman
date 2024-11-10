@@ -12,6 +12,7 @@ const Login: React.FC = () => {
       const response = await api.post('/auth/auto-login');
       
       if (response.data.success && response.data.token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         await login(response.data.token);
         navigate('/');
       } else {

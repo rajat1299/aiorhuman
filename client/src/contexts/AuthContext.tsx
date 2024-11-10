@@ -19,6 +19,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       loadUser(token);
     } else {
       setLoading(false);
@@ -27,12 +28,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUser = useCallback(async (token: string) => {
     try {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
       const response = await api.get('/auth/profile');
       setUser(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Failed to load user:', error);
       localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
       setLoading(false);
       throw error;
     }
@@ -41,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (token: string): Promise<boolean> => {
     try {
       localStorage.setItem('token', token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       await loadUser(token);
       return true;
     } catch (error) {
@@ -51,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('token');
+    delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
