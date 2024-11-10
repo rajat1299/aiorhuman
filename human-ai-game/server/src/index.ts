@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
@@ -26,7 +26,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-
 app.use(requestLogger);
 
 // Create Socket.IO server with CORS config
@@ -41,15 +40,15 @@ const io = new Server(httpServer, {
 });
 
 // Group all auth routes
-const authRouter = express.Router();
-app.use('/auth', authRouter);
+const router = express.Router();
+app.use('/auth', router);
 
 // Public auth routes
-authRouter.post('/auto-login', autoLogin);
+router.post('/auto-login', autoLogin);
 
 // Protected auth routes
-authRouter.get('/profile', authMiddleware, getProfile);
-authRouter.put('/profile', authMiddleware, updateProfile);
+router.get('/profile', authMiddleware, getProfile);
+router.put('/profile', authMiddleware, updateProfile);
 
 // Initialize game service
 const gameService = new GameService(io);

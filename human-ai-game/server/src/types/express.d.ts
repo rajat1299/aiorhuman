@@ -21,4 +21,5 @@ export interface AuthRequest extends Request {
   header(name: string): string | undefined;
 }
 
-export type { Request, Response, NextFunction, Router, RequestHandler }; 
+// Don't export types from express directly
+// Instead, use them from the 'express' package 
