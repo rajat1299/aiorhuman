@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { IUser } from '../models/User';
 
 declare global {
@@ -6,8 +6,6 @@ declare global {
     interface Request {
       user?: IUser;
       token?: string;
-      body: any;
-      header(name: string): string | undefined;
     }
   }
 }
@@ -18,5 +16,4 @@ export interface AuthRequest extends Request {
   body: {
     [key: string]: any;
   };
-  header(name: string): string | undefined;
 } 
