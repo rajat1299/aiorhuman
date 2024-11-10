@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction, Router, RequestHandler } from 'express';
 import { IUser } from '../models/User';
 
 declare global {
@@ -6,6 +6,8 @@ declare global {
     interface Request {
       user?: IUser;
       token?: string;
+      header(name: string): string | undefined;
+      body: any;
     }
   }
 }
@@ -16,4 +18,7 @@ export interface AuthRequest extends Request {
   body: {
     [key: string]: any;
   };
-} 
+  header(name: string): string | undefined;
+}
+
+export type { Request, Response, NextFunction, Router, RequestHandler }; 
