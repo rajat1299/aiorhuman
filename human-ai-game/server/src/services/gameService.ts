@@ -7,7 +7,8 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat';
 import { ScoringService } from './scoringService';
 import { LeaderboardService } from './leaderboardService';
 import { config } from 'dotenv';
-config(); // Load environment variables
+
+config();
 
 console.log('Environment check:', {
   hasOpenAIKey: !!process.env.OPENAI_API_KEY,

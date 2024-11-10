@@ -10,7 +10,7 @@ import { autoLogin, getProfile, updateProfile } from './controllers/authControll
 import { AuthRequest } from './types/express';
 import { requestLogger } from './middleware/logging';
 
-config(); // Load environment variables
+config();
 
 const app = express();
 const httpServer = createServer(app);
