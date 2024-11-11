@@ -1,13 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
-// Extend Request type
-interface AuthRequest extends Request {
-  user?: any;
-  headers: {
-    authorization?: string;
-  };
-}
+import { AuthRequest } from '../types/express';
 
 export const verifyToken = (token: string): any => {
   try {
@@ -49,6 +42,3 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
     return res.status(401).json({ error: 'Please authenticate.' });
   }
 };
-
-export { AuthRequest };
-export const authMiddleware = auth;

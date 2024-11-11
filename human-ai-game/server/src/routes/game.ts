@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Router, Request, Response, RequestHandler } from 'express';
 import { auth } from '../middleware/auth';
 import {
   getGameHistory,
@@ -6,12 +6,13 @@ import {
   getCurrentGame,
   getGameStats
 } from '../controllers/gameController';
+import { AuthRequest } from '../types/express';
 
-const router = express.Router();
+const router = Router();
 
-router.get('/history', auth as express.RequestHandler, getGameHistory as express.RequestHandler);
-router.get('/leaderboard', getLeaderboard as express.RequestHandler);
-router.get('/current', auth as express.RequestHandler, getCurrentGame as express.RequestHandler);
-router.get('/stats', auth as express.RequestHandler, getGameStats as express.RequestHandler);
+router.get('/history', auth, getGameHistory);
+router.get('/leaderboard', getLeaderboard);
+router.get('/current', auth, getCurrentGame);
+router.get('/stats', auth, getGameStats);
 
 export default router; 

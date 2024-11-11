@@ -1,18 +1,22 @@
-import { Request, Response, NextFunction } from 'express';
 import { IUser } from '../models/User';
 
-// Only augment the Express namespace
+// Only augment Express namespace
 declare global {
   namespace Express {
     interface Request {
       user?: IUser;
       token?: string;
+      body: any;
+      headers: {
+        authorization?: string;
+      };
     }
   }
 }
 
 // Export our custom interface
-export interface AuthRequest extends Request {
+export interface AuthRequest extends Express.Request {
   user?: IUser;
   token?: string;
+  body: any;
 }

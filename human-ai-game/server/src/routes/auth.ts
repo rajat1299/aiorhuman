@@ -1,10 +1,10 @@
-import express, { Request, Response, Router } from 'express';
+import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../middleware/auth';
 import { AuthRequest } from '../types/express';
 
-const router = Router();
+const router = express.Router();
 
 router.post('/auto-login', async (req: Request, res: Response) => {
   try {

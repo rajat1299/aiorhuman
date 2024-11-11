@@ -1,5 +1,5 @@
-import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';
+import { AuthRequest } from '../types/express';
 import GameSession from '../models/GameSession';
 import User from '../models/User';
 

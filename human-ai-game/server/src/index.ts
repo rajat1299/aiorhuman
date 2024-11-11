@@ -1,11 +1,12 @@
-import express, { Router } from 'express';
+import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import { config } from 'dotenv';
 import { GameService } from './services/gameService';
-import { verifyToken, authMiddleware, AuthRequest } from './middleware/auth';
+import { verifyToken, auth } from './middleware/auth';
+import { AuthRequest } from './types/express';
 import { autoLogin, getProfile, updateProfile } from './controllers/authController';
 import { requestLogger } from './middleware/logging';
 
@@ -46,8 +47,8 @@ app.use('/auth', router);
 router.post('/auto-login', autoLogin);
 
 // Protected auth routes
-router.get('/profile', authMiddleware, getProfile);
-router.put('/profile', authMiddleware, updateProfile);
+router.get('/profile', auth, getProfile);
+router.put('/profile', auth, updateProfile);
 
 // Initialize game service
 const gameService = new GameService(io);
