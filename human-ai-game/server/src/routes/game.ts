@@ -1,4 +1,4 @@
-import express, { Router, Request, Response, RequestHandler } from 'express';
+import express, { Router } from 'express';
 import { auth } from '../middleware/auth';
 import {
   getGameHistory,
@@ -6,10 +6,10 @@ import {
   getCurrentGame,
   getGameStats
 } from '../controllers/gameController';
-import { AuthRequest } from '../types/express';
 
 const router = Router();
 
+// Use auth middleware for protected routes
 router.get('/history', auth, getGameHistory);
 router.get('/leaderboard', getLeaderboard);
 router.get('/current', auth, getCurrentGame);

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { generateUsername } from '../utils/userUtils';

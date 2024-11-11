@@ -1,6 +1,6 @@
+import { Request } from 'express';
 import { IUser } from '../models/User';
 
-// Only augment Express namespace
 declare global {
   namespace Express {
     interface Request {
@@ -15,7 +15,7 @@ declare global {
 }
 
 // Export our custom interface
-export interface AuthRequest extends Express.Request {
+export interface AuthRequest extends Request {
   user?: IUser;
   token?: string;
   body: any;

@@ -1,8 +1,9 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../middleware/auth';
 import { AuthRequest } from '../types/express';
+import type { Request, Response } from 'express';
 
 const router = express.Router();
 
