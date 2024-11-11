@@ -1,44 +1,46 @@
-import express, { Request, Response, NextFunction } from 'express';
+// src/middleware/auth.ts
+
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AuthRequest } from '../types/express';
+import User from '../models/User';
 
-export const verifyToken = (token: string): any => {
-  try {
-    if (!process.env.JWT_SECRET) {
-      console.error('JWT_SECRET is not set');
-      return null;
-    }
-    return jwt.verify(token, process.env.JWT_SECRET);
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-};
-
-export const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void | Response> => {
+export const auth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       console.log('No Authorization header');
-      return res.status(401).json({ error: 'No Authorization header' });
+      res.status(401).json({ error: 'No Authorization header' });
+      return;
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (!token) {
       console.log('No token provided');
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
-    const decoded = verifyToken(token);
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not set');
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
     if (!decoded) {
       console.log('Token verification failed');
-      return res.status(401).json({ error: 'Invalid token' });
+      res.status(401).json({ error: 'Invalid token' });
+      return;
     }
 
-    req.user = decoded;
-    return next();
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      res.status(401).json({ error: 'User not found' });
+      return;
+    }
+
+    req.user = user;
+    next();
   } catch (error) {
     console.error('Authentication failed:', error);
-    return res.status(401).json({ error: 'Please authenticate.' });
+    res.status(401).json({ error: 'Please authenticate.' });
   }
 };

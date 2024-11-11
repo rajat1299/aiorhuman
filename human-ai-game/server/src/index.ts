@@ -1,13 +1,16 @@
+// src/index.ts
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import { config } from 'dotenv';
+import jwt from 'jsonwebtoken';
+import User from './models/User';
 import { GameService } from './services/gameService';
-import { verifyToken, auth } from './middleware/auth';
-import { AuthRequest } from './types/express';
-import { autoLogin, getProfile, updateProfile } from './controllers/authController';
+import { auth } from './middleware/auth';
+import { autoLogin } from './controllers/authController';
 import { requestLogger } from './middleware/logging';
 
 config();
@@ -17,11 +20,12 @@ const httpServer = createServer(app);
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://aiorhuman-six.vercel.app'] 
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin:
+    process.env.NODE_ENV === 'production'
+      ? ['https://aiorhuman-six.vercel.app']
+      : ['http://localhost:5173', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT'],
-  credentials: true
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
@@ -31,24 +35,16 @@ app.use(requestLogger);
 // Create Socket.IO server with CORS config
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || 
-      ['https://aiorhuman-six.vercel.app'],
-    methods: ["GET", "POST"],
+    origin:
+      process.env.ALLOWED_ORIGINS?.split(',') || ['https://aiorhuman-six.vercel.app'],
+    methods: ['GET', 'POST'],
     credentials: true,
-    allowedHeaders: ["my-custom-header", "Content-Type", "Authorization"],
-  }
+    allowedHeaders: ['my-custom-header', 'Content-Type', 'Authorization'],
+  },
 });
 
-// Group all auth routes
-const router = express.Router();
-app.use('/auth', router);
-
-// Public auth routes
-router.post('/auto-login', autoLogin);
-
-// Protected auth routes
-router.get('/profile', auth, getProfile);
-router.put('/profile', auth, updateProfile);
+// Auth routes
+app.post('/auth/auto-login', autoLogin);
 
 // Initialize game service
 const gameService = new GameService(io);
@@ -61,9 +57,18 @@ io.use(async (socket, next) => {
       return next(new Error('Authentication error'));
     }
 
-    const user = await verifyToken(token);
-    if (!user) {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not set');
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
+    if (!decoded) {
       return next(new Error('Invalid token'));
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return next(new Error('User not found'));
     }
 
     socket.data.user = user;
@@ -90,7 +95,8 @@ io.on('connection', async (socket) => {
 });
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI!)
+mongoose
+  .connect(process.env.MONGODB_URI!)
   .then(() => {
     console.log('Connected to MongoDB Atlas');
     const PORT = process.env.PORT || 5001;
@@ -98,9 +104,12 @@ mongoose.connect(process.env.MONGODB_URI!)
       console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     });
   })
-  .catch(error => {
+  .catch((error) => {
     console.error('MongoDB connection error:', error);
-    console.error('Connection string:', process.env.MONGODB_URI?.replace(/\/\/.*@/, '//<credentials>@'));
+    console.error(
+      'Connection string:',
+      process.env.MONGODB_URI?.replace(/\/\/.*@/, '//<credentials>@')
+    );
     process.exit(1);
   });
 
@@ -113,3 +122,4 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   process.exit(1);
 });
+
