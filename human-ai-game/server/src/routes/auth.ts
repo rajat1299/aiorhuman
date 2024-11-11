@@ -1,14 +1,10 @@
-import express from 'express';
+import express, { Request, Response, Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../middleware/auth';
-import type { Request, Response } from 'express';
+import { AuthRequest } from '../types/express';
 
-const router = express.Router();
-
-interface AuthRequest extends Request {
-  user?: any;
-}
+const router = Router();
 
 router.post('/auto-login', async (req: Request, res: Response) => {
   try {
@@ -27,7 +23,7 @@ router.post('/auto-login', async (req: Request, res: Response) => {
     );
 
     console.log('Generated username:', username);
-    res.json({ 
+    const response = {
       success: true, 
       token, 
       user: { 
@@ -43,7 +39,8 @@ router.post('/auto-login', async (req: Request, res: Response) => {
           averagePoints: 0
         }
       } 
-    });
+    };
+    res.status(200).json(response);
   } catch (error) {
     console.error('Auto-login error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
@@ -52,7 +49,8 @@ router.post('/auto-login', async (req: Request, res: Response) => {
 
 router.get('/profile', auth, (req: AuthRequest, res: Response) => {
   try {
-    res.json(req.user);
+    const response = { user: req.user };
+    res.status(200).json(response);
   } catch (error) {
     console.error('Profile error:', error);
     res.status(500).json({ error: 'Server error' });

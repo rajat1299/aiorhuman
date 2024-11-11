@@ -8,6 +8,8 @@ declare global {
       token?: string;
       method: string;
       path: string;
+      body: any;
+      json: any;
     }
   }
 }
@@ -15,7 +17,7 @@ declare global {
 export interface AuthRequest extends Request {
   user?: IUser;
   token?: string;
+  body: any;
 }
 
-// Export express types that we need
-export type { Request, Response, NextFunction, Router, RequestHandler };
+// Don't export express types, use them directly from 'express'
