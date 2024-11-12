@@ -1,6 +1,6 @@
 // src/routes/game.ts
 
-import { Router } from 'express';
+import express, { Router, Request, Response } from 'express';
 import { auth } from '../middleware/auth';
 import {
   getGameHistory,
@@ -12,9 +12,9 @@ import {
 const router = Router();
 
 // Use auth middleware for protected routes
-router.get('/history', auth, getGameHistory);
-router.get('/leaderboard', getLeaderboard);
-router.get('/current', auth, getCurrentGame);
-router.get('/stats', auth, getGameStats);
+router.get('/history', auth as express.RequestHandler, getGameHistory as express.RequestHandler);
+router.get('/leaderboard', getLeaderboard as express.RequestHandler);
+router.get('/current', auth as express.RequestHandler, getCurrentGame as express.RequestHandler);
+router.get('/stats', auth as express.RequestHandler, getGameStats as express.RequestHandler);
 
 export default router;

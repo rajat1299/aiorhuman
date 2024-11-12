@@ -1,10 +1,9 @@
 // src/routes/auth.ts
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { autoLogin } from '../controllers/authController';
 import { auth } from '../middleware/auth';
-import type { Request, Response } from 'express';
-import { AuthRequest } from '../types/custom';
+import { AuthRequest } from '../types';
 
 const router = express.Router();
 
