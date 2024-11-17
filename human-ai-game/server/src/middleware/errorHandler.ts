@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../utils/ApiError';
-import config from '../config/config';
+import { config } from '../config/config';
 
 export const errorHandler = (
   err: Error,
@@ -15,13 +15,13 @@ export const errorHandler = (
       success: false,
       message: err.message,
       errors: err.errors,
-      ...(config.environment === 'development' && { stack: err.stack })
+      ...(config.nodeEnv === 'development' && { stack: err.stack })
     });
   }
 
   return res.status(500).json({
     success: false,
     message: 'Internal server error',
-    ...(config.environment === 'development' && { stack: err.stack })
+    ...(config.nodeEnv === 'development' && { stack: err.stack })
   });
 }; 

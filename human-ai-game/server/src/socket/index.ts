@@ -5,7 +5,7 @@ import { AIService } from '../services/AIService';
 import { GameController } from '../controllers/gameController';
 import { Game, IGame } from '../models/Game';
 import mongoose from 'mongoose';
-import config from '../config/config';
+import { config } from '../config/config';
 import { User } from '../models/User';
 
 interface AuthenticatedSocket extends Socket {

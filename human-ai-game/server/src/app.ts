@@ -5,7 +5,7 @@ import compression from 'compression';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import config from './config/config';
+import { config } from './config/config';
 import { errorHandler } from './middleware/errorHandler';
 import { ApiError } from './utils/ApiError';
 import routes from './routes';
@@ -16,12 +16,12 @@ const app = express();
 const httpServer = createServer(app);
 
 // Connect to MongoDB with more detailed error logging
-mongoose.connect(config.mongoUri, {
+mongoose.connect(config.mongodbUri!, { 
   serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
 })
 .then(() => {
   console.log('Connected to MongoDB');
-  console.log('Database connection string:', config.mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')); // Logs URI with hidden password
+  console.log('Database connection string:', config.mongodbUri!.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')); // Logs URI with hidden password
 })
 .catch((err) => {
   console.error('MongoDB connection error details:', {

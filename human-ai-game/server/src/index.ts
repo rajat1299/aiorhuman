@@ -1,11 +1,11 @@
 import { app, httpServer } from './app';
-import config from './config/config';
+import { config } from './config/config';
 import mongoose from 'mongoose';
 
 const startServer = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(config.mongoUri);
+    await mongoose.connect(config.mongodbUri || '');
     console.log('Connected to MongoDB');
 
     // Start the server

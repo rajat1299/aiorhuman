@@ -1,8 +1,8 @@
 import winston from 'winston';
-import config from '../config/config';
+import { config } from '../config/config';
 
 const logger = winston.createLogger({
-  level: config.environment === 'development' ? 'debug' : 'info',
+  level: config.nodeEnv === 'development' ? 'debug' : 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -13,7 +13,7 @@ const logger = winston.createLogger({
   ]
 });
 
-if (config.environment !== 'production') {
+if (config.nodeEnv !== 'production') {
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),

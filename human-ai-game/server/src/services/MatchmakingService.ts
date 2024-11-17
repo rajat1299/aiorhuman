@@ -1,7 +1,7 @@
 import { User } from '../models/User';
 import { Game } from '../models/Game';
 import { ApiError } from '../utils/ApiError';
-import config from '../config/config';
+import { config } from '../config/config';
 import { generateId } from '../utils/gameUtils';
 
 interface QueuedPlayer {

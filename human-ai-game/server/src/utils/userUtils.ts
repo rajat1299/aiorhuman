@@ -1,6 +1,6 @@
 import { customAlphabet } from 'nanoid';
 import jwt from 'jsonwebtoken';
-import config from '../config/config';
+import { config } from '../config/config';
 import { User, IUser } from '../models/User';
 import mongoose from 'mongoose';
 
@@ -24,12 +24,22 @@ export const generateUsername = async (): Promise<string> => {
 };
 
 export const generateToken = (userId: string): string => {
+  if (!config.jwtSecret) {
+    throw new Error('JWT_SECRET is not defined');
+  }
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '24h' });
 };
 
 export const verifyToken = (token: string): { userId: string } => {
+  if (!config.jwtSecret) {
+    throw new Error('JWT_SECRET is not defined');
+  }
   try {
-    return jwt.verify(token, config.jwtSecret) as { userId: string };
+    const decoded = jwt.verify(token, config.jwtSecret);
+    if (typeof decoded === 'string' || !('userId' in decoded)) {
+      throw new Error('Invalid token payload');
+    }
+    return { userId: decoded.userId };
   } catch (error) {
     throw new Error('Invalid token');
   }

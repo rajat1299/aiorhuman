@@ -3,7 +3,7 @@ import { Game } from '../models/Game';
 import { User } from '../models/User';
 import { ApiError } from '../utils/ApiError';
 import { calculateScore } from '../utils/gameUtils';
-import config from '../config/config';
+import { config } from '../config/config';
 
 export class GameController {
   // Get user's game history
