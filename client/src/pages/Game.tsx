@@ -1,417 +1,231 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
 import ChatWindow from '../components/game/ChatWindow';
+import GameControls from '../components/game/GameControls';
+import GameResults from '../components/game/GameResults';
+import { GameProvider } from '../contexts/GameContext';
 
-interface GameStartData {
+const SEARCH_TIMEOUT = 10000; // 10 seconds before AI fallback
+
+interface GameSession {
   sessionId: string;
   opponent: {
     id: string;
-    isAI: boolean;
+    username: string;
   };
 }
 
 interface GameResult {
-  player1: {
-    userId: string;
-    guess: 'human' | 'ai';
-    result: {
-      correct: boolean;
-      guess: 'human' | 'ai';
-      actualType: 'human' | 'ai';
-      score: {
-        total: number;
-        breakdown: {
-          basePoints: number;
-          messageBonus: number;
-          timeBonus: number;
-          deceptionBonus: number;
-        };
-        multiplier: number;
-      };
-      stats: {
-        messageCount: number;
-        duration: number;
-        averageResponseTime: number;
-      };
-    };
-  };
-  player2: {
-    userId: string;
-    guess: 'human' | 'ai';
-    result: {
-      correct: boolean;
-      guess: 'human' | 'ai';
-      actualType: 'human' | 'ai';
-      score: {
-        total: number;
-        breakdown: {
-          basePoints: number;
-          messageBonus: number;
-          timeBonus: number;
-          deceptionBonus: number;
-        };
-        multiplier: number;
-      };
-      stats: {
-        messageCount: number;
-        duration: number;
-        averageResponseTime: number;
-      };
-    };
-  };
-  sessionStats: {
+  winner?: string;
+  score?: number;
+  forfeitedBy?: string;
+  error?: string;
+  stats: {
     messageCount: number;
     duration: number;
-    averageResponseTime: number;
+    player1Correct: boolean;
+    player2Correct: boolean;
+    guesses?: {
+      player: {
+        guessedAI: boolean;
+        timestamp: Date;
+      };
+      opponent: {
+        guessedAI: boolean;
+        timestamp: Date;
+      };
+    };
+    isAIOpponent?: boolean;
   };
-}
-
-interface WaitingState {
-  isWaiting: boolean;
-  message: string;
 }
 
 const Game: React.FC = () => {
-  const { user } = useAuth();
-  const socket = useSocket();
-  const [inQueue, setInQueue] = useState(false);
-  const [inGame, setInGame] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
-  const [waitingForGuess, setWaitingForGuess] = useState<WaitingState>({
-    isWaiting: false,
-    message: ''
-  });
-  const [matchmakingStage, setMatchmakingStage] = useState<'idle' | 'searching' | 'found' | 'connecting'>('idle');
+  const socket = useSocket();
+  const { isAuthenticated, updatePoints } = useAuth();
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  const [showGuessPrompt, setShowGuessPrompt] = useState(false);
+  const [chatDisabled, setChatDisabled] = useState(false);
+  const [isRevealingResult, setIsRevealingResult] = useState(false);
 
   useEffect(() => {
-    if (socket) {
-      socket.on('queue-joined', () => {
-        setInQueue(true);
-        setGameResult(null);
-        setMatchmakingStage('searching');
-        setCountdown(10);
+    if (!socket || !isAuthenticated) return;
 
-        // Simulate matchmaking stages
-        setTimeout(() => setMatchmakingStage('found'), 5000);
-        setTimeout(() => setMatchmakingStage('connecting'), 7000);
-        setTimeout(() => {
-          setMatchmakingStage('idle');
-          setInQueue(false);
-          setInGame(true);
-        }, 10000);
-      });
-
-      socket.on('game-started', (data: GameStartData) => {
-        console.log('Game started:', data);
-        setInQueue(false);
-        setInGame(true);
-        setWaitingForGuess({ isWaiting: false, message: '' });
-      });
-
-      socket.on('prompt-guess', (data: { message: string }) => {
-        console.log('Received prompt-guess:', data);
-        setWaitingForGuess({
-          isWaiting: true,
-          message: data.message
-        });
-      });
-
-      socket.on('opponent-guess-made', (data: { message: string }) => {
-        console.log('Opponent made guess:', data);
-        setWaitingForGuess({
-          isWaiting: true,
-          message: data.message
-        });
-        setInGame(false);
-      });
-
-      socket.on('waiting-for-result', (data: { message: string }) => {
-        console.log('Waiting for result:', data);
-        setWaitingForGuess({
-          isWaiting: true,
-          message: data.message
-        });
-        setInGame(false);
-      });
-
-      socket.on('game-result', (result: GameResult) => {
-        console.log('Game result received:', result);
-        setGameResult(result);
-        setInGame(false);
-        setWaitingForGuess({ isWaiting: false, message: '' });
-      });
-
-      socket.on('game-ended', () => {
-        console.log('Game ended');
-        setInGame(false);
-        setWaitingForGuess({ isWaiting: false, message: '' });
-      });
-
-      return () => {
-        socket.off('queue-joined');
-        socket.off('game-started');
-        socket.off('prompt-guess');
-        socket.off('opponent-guess-made');
-        socket.off('waiting-for-result');
-        socket.off('game-result');
-        socket.off('game-ended');
-      };
-    }
-  }, [socket]);
-
-  // Countdown effect
-  useEffect(() => {
-    if (countdown !== null && countdown > 0) {
-      const timer = setInterval(() => {
-        setCountdown(prev => prev !== null ? prev - 1 : null);
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [countdown]);
-
-  const joinQueue = () => {
-    if (socket) {
-      socket.emit('join-queue');
-    }
-  };
-
-  const makeGuess = (guess: 'human' | 'ai') => {
-    if (socket) {
-      console.log('Making guess:', guess);
-      socket.emit('make-guess', guess);
-      setWaitingForGuess({
-        isWaiting: true,
-        message: "Waiting for opponent's guess..."
-      });
-      setInGame(false);
-    }
-  };
-
-  const playAgain = () => {
-    setGameResult(null);
-    setWaitingForGuess({
-      isWaiting: false,
-      message: ''
+    socket.on('game-started', (data: GameSession) => {
+      console.log('Game started:', data);
+      setGameSession(data);
+      setIsSearching(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      socket.emit('join-game', data.sessionId);
     });
-    joinQueue();
-  };
 
-  const renderMatchmakingStatus = () => {
-    switch (matchmakingStage) {
-      case 'searching':
-        return 'Searching for players...';
-      case 'found':
-        return 'Match found! Getting ready...';
-      case 'connecting':
-        return 'Connecting to match...';
-      default:
-        return 'Looking for a match...';
+    socket.on('game-ended', async (result: GameResult) => {
+      console.log('Game ended:', result);
+      
+      // Set revealing state
+      setIsRevealingResult(true);
+      
+      // Add random delay between 3-4 seconds
+      const delay = 3000 + Math.random() * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      // Show results
+      setGameResult(result);
+      setIsRevealingResult(false);
+      
+      if (result.score) {
+        updatePoints(result.score);
+      }
+    });
+
+    socket.on('queue-status', (data) => {
+      console.log('Queue status:', data);
+    });
+
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+      setIsSearching(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    });
+
+    socket.on('opponent-made-guess', () => {
+      console.log('Opponent has made their guess');
+      setShowGuessPrompt(true);
+      setChatDisabled(true);
+    });
+
+    return () => {
+      if (socket) {
+        socket.off('game-started');
+        socket.off('game-ended');
+        socket.off('queue-status');
+        socket.off('error');
+        socket.off('opponent-made-guess');
+        if (isSearching) {
+          socket.emit('leave-queue');
+        }
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [socket, isSearching, isAuthenticated, updatePoints]);
+
+  const handleFindMatch = () => {
+    if (!socket || !isAuthenticated) return;
+    
+    try {
+      setIsSearching(true);
+      socket.emit('join-queue');
+      console.log('Joining queue...');
+
+      timeoutRef.current = setTimeout(() => {
+        if (isSearching && socket) {
+          console.log('Timeout reached, requesting AI opponent...');
+          socket.emit('request-ai-opponent');
+        }
+      }, SEARCH_TIMEOUT);
+    } catch (error) {
+      console.error('Error finding match:', error);
+      setIsSearching(false);
     }
   };
+
+  const handleCancelSearch = () => {
+    if (!socket) return;
+    setIsSearching(false);
+    socket.emit('leave-queue');
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    console.log('Leaving queue...');
+  };
+
+  const handleGuess = (guessedAI: boolean) => {
+    if (!socket || !gameSession) return;
+    socket.emit('make-guess', {
+      sessionId: gameSession.sessionId,
+      guessedAI
+    });
+  };
+
+  const handlePlayAgain = () => {
+    setGameResult(null);
+    setGameSession(null);
+    handleFindMatch();
+  };
+
+  if (isRevealingResult) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="text-2xl text-game-light animate-pulse">
+          Revealing results...
+        </div>
+      </div>
+    );
+  }
+
+  if (gameResult) {
+    return <GameResults result={gameResult} onPlayAgain={handlePlayAgain} />;
+  }
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="bg-game-dark-600 rounded-lg shadow-xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-game-light">Welcome, {user?.username}!</h1>
-          {inGame && (
-            <div className="flex space-x-4">
+    <div className="flex flex-col items-center justify-center min-h-[80vh]">
+      {gameSession ? (
+        <div className="container mx-auto px-4 py-8 space-y-4">
+          <GameProvider sessionId={gameSession.sessionId}>
+            <ChatWindow 
+              sessionId={gameSession.sessionId}
+              opponent={gameSession.opponent}
+              disabled={chatDisabled}
+            />
+            {showGuessPrompt && (
+              <div className="text-center text-game-light mb-4">
+                <p className="text-lg font-bold">Your opponent has made their guess!</p>
+                <p className="text-game-light-600">Chat is now disabled. Please make your guess.</p>
+              </div>
+            )}
+            <GameControls 
+              onGuessHuman={() => handleGuess(false)}
+              onGuessAI={() => handleGuess(true)}
+            />
+          </GameProvider>
+        </div>
+      ) : (
+        <div className="text-center">
+          {!isSearching ? (
+            <button
+              onClick={handleFindMatch}
+              className="px-8 py-4 bg-game-primary text-white rounded-lg hover:bg-game-primary-dark transition-colors"
+              disabled={!isAuthenticated || !socket}
+            >
+              Find Match
+            </button>
+          ) : (
+            <div>
+              <div className="mb-4">
+                <div className="text-xl mb-2">Finding your opponent...</div>
+                <div className="text-sm text-game-light-400">
+                  This might take a moment
+                </div>
+              </div>
               <button
-                onClick={() => makeGuess('human')}
-                className="bg-game-secondary hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors"
+                onClick={handleCancelSearch}
+                className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Guess Human
-              </button>
-              <button
-                onClick={() => makeGuess('ai')}
-                className="bg-game-primary hover:bg-game-primary-dark text-white px-6 py-2 rounded-lg transition-colors"
-              >
-                Guess AI
+                Cancel
               </button>
             </div>
           )}
         </div>
-        
-        {!inQueue && !inGame && !gameResult && (
-          <div className="text-center py-12">
-            <button
-              onClick={joinQueue}
-              className="bg-game-primary hover:bg-game-primary-dark text-white font-bold py-3 px-8 rounded-lg text-lg transition-all duration-200 transform hover:scale-[1.02]"
-            >
-              Find Match
-            </button>
-          </div>
-        )}
-
-        {inQueue && (
-          <div className="text-center py-12">
-            <div className="mb-6 text-4xl font-bold text-game-primary animate-pulse">
-              {countdown}
-            </div>
-            <div className="text-xl text-game-light mb-8">
-              {renderMatchmakingStatus()}
-            </div>
-            <div className="flex justify-center space-x-3">
-              <div className="w-3 h-3 bg-game-primary rounded-full animate-bounce" 
-                   style={{ animationDelay: '0ms' }}></div>
-              <div className="w-3 h-3 bg-game-primary rounded-full animate-bounce" 
-                   style={{ animationDelay: '150ms' }}></div>
-              <div className="w-3 h-3 bg-game-primary rounded-full animate-bounce" 
-                   style={{ animationDelay: '300ms' }}></div>
-            </div>
-          </div>
-        )}
-
-        {inGame && <ChatWindow />}
-
-        {waitingForGuess.isWaiting && !gameResult && (
-          <div className="fixed inset-0 bg-game-dark-800/80 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-game-dark-600 p-8 rounded-xl max-w-md w-full mx-4 text-center">
-              <div className="text-xl text-game-light mb-6">
-                {waitingForGuess.message}
-              </div>
-              {waitingForGuess.message.includes("Your turn") && (
-                <div className="flex justify-center space-x-4 mb-6">
-                  <button
-                    onClick={() => makeGuess('human')}
-                    className="bg-game-secondary hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors"
-                  >
-                    Guess Human
-                  </button>
-                  <button
-                    onClick={() => makeGuess('ai')}
-                    className="bg-game-primary hover:bg-game-primary-dark text-white px-6 py-2 rounded-lg transition-colors"
-                  >
-                    Guess AI
-                  </button>
-                </div>
-              )}
-              <div className="flex justify-center space-x-2">
-                <div className="w-2 h-2 bg-game-primary rounded-full animate-bounce" 
-                     style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-game-primary rounded-full animate-bounce" 
-                     style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-game-primary rounded-full animate-bounce" 
-                     style={{ animationDelay: '300ms' }}></div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {gameResult && (
-          <div className="fixed inset-0 bg-game-dark-800/90 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-game-dark-600 p-8 rounded-xl max-w-4xl w-full mx-4">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-game-primary mb-2">Results Revealed!</h2>
-                <p className="text-game-light-600">Both players have made their guesses</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Your Results */}
-                <div className="bg-game-dark-600/50 p-6 rounded-lg">
-                  <h3 className="text-xl font-bold text-game-primary mb-4">Your Results</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-game-light-600">Your Guess:</p>
-                      <p className="text-xl font-bold text-game-light">
-                        {user?.id === gameResult.player1.userId ? 
-                          gameResult.player1.guess : gameResult.player2.guess}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-game-light-600">Result:</p>
-                      <p className={`text-xl font-bold ${user?.id === gameResult.player1.userId ? 
-                        (gameResult.player1.result.correct ? 'text-green-500' : 'text-red-500') :
-                        (gameResult.player2.result.correct ? 'text-green-500' : 'text-red-500')}`}>
-                        {user?.id === gameResult.player1.userId ?
-                          (gameResult.player1.result.correct ? 'Correct!' : 'Incorrect!') :
-                          (gameResult.player2.result.correct ? 'Correct!' : 'Incorrect!')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-game-light-600">Points Earned:</p>
-                      <p className="text-xl font-bold text-game-primary">
-                        {user?.id === gameResult.player1.userId ?
-                          gameResult.player1.result.score.total :
-                          gameResult.player2.result.score.total}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Opponent's Results */}
-                <div className="bg-game-dark-600/50 p-6 rounded-lg">
-                  <h3 className="text-xl font-bold text-game-primary mb-4">Opponent's Results</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-game-light-600">Their Guess:</p>
-                      <p className="text-xl font-bold text-game-light">
-                        {user?.id === gameResult.player1.userId ? 
-                          gameResult.player2.guess : gameResult.player1.guess}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-game-light-600">Result:</p>
-                      <p className={`text-xl font-bold ${user?.id === gameResult.player1.userId ? 
-                        (gameResult.player2.result.correct ? 'text-green-500' : 'text-red-500') :
-                        (gameResult.player1.result.correct ? 'text-green-500' : 'text-red-500')}`}>
-                        {user?.id === gameResult.player1.userId ?
-                          (gameResult.player2.result.correct ? 'Correct!' : 'Incorrect!') :
-                          (gameResult.player1.result.correct ? 'Correct!' : 'Incorrect!')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-game-light-600">Points Earned:</p>
-                      <p className="text-xl font-bold text-game-primary">
-                        {user?.id === gameResult.player1.userId ?
-                          gameResult.player2.result.score.total :
-                          gameResult.player1.result.score.total}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Session Stats */}
-              <div className="mt-8 bg-game-dark-600/50 p-6 rounded-lg">
-                <h3 className="text-xl font-bold text-game-primary mb-4">Session Stats</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-game-light-600">Messages</p>
-                    <p className="text-2xl font-bold text-game-light">
-                      {gameResult.sessionStats.messageCount}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-game-light-600">Duration</p>
-                    <p className="text-2xl font-bold text-game-light">
-                      {Math.floor(gameResult.sessionStats.duration / 60)}m {gameResult.sessionStats.duration % 60}s
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-game-light-600">Avg Response</p>
-                    <p className="text-2xl font-bold text-game-light">
-                      {gameResult.sessionStats.averageResponseTime.toFixed(1)}s
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Play Again Button */}
-              <div className="text-center mt-8">
-                <button
-                  onClick={playAgain}
-                  className="bg-game-primary hover:bg-game-primary-dark text-white font-bold py-3 px-8 rounded-lg transition-all duration-200 transform hover:scale-[1.02]"
-                >
-                  Play Again
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };

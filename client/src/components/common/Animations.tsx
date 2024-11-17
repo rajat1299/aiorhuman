@@ -45,6 +45,12 @@ export const SlideUp: React.FC<FadeInProps> = ({
   );
 };
 
-export const PulseEffect: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <span className={`absolute inset-0 animate-pulseRing rounded-lg ${className}`} />
-); 
+interface PulseEffectProps {
+  className?: string;
+}
+
+export const PulseEffect: React.FC<PulseEffectProps> = ({ className = '' }) => {
+  return (
+    <div className={`absolute inset-0 rounded-lg animate-pulse ${className}`} />
+  );
+}; 

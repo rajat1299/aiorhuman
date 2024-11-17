@@ -1,69 +1,98 @@
-// src/controllers/authController.ts
-
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
-import User from '../models/User';
-import { generateUsername } from '../utils/userUtils';
-import { jwtConfig } from '../config/jwt';
+import { User } from '../models/User';
+import { createTemporaryUser, verifyToken } from '../utils/userUtils';
+import { ApiError } from '../utils/ApiError';
 
-export const autoLogin = async (req: Request, res: Response) => {
-  try {
-    console.log('Auto-login request received');
-
-    // Generate a random username
-    const username = generateUsername();
-    console.log('Generated username:', username);
-
-    // Create a temporary email and password for auto-login users
-    const tempEmail = `${username}@temp.com`;
-    const tempPassword = Math.random().toString(36).slice(-8);
-
-    // Create new user with temporary credentials
-    const user = new User({
-      username,
-      email: tempEmail,
-      password: tempPassword,
-      stats: {
-        totalGames: 0,
-        gamesWon: 0,
-        correctGuesses: 0,
-        successfulDeceptions: 0,
-        winRate: 0,
-        totalPoints: 0,
-        averagePoints: 0,
-      },
-      lastActive: new Date(),
-    });
-
-    await user.save();
-
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        username: user.username,
-      },
-      jwtConfig.secret,
-      { expiresIn: jwtConfig.expiresIn }
-    );
-
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        stats: user.stats,
-      },
-    });
-  } catch (error) {
-    console.warn('Auto-login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error during auto-login',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+export class AuthController {
+  // Auto-login: Create temporary user
+  static async autoLogin(req: Request, res: Response) {
+    try {
+      const { user, token } = await createTemporaryUser();
+      
+      res.status(201).json({
+        success: true,
+        token: token,
+        user: {
+          id: user._id,
+          username: user.username,
+          stats: user.stats
+        }
+      });
+    } catch (error) {
+      throw new ApiError(500, 'Error creating temporary user');
+    }
   }
-};
 
+  // Get user profile
+  static async getProfile(req: Request, res: Response) {
+    try {
+      if (!req.user?.userId) {
+        throw new ApiError(401, 'User not authenticated');
+      }
 
+      const user = await User.findById(req.user.userId);
+      if (!user) {
+        throw new ApiError(404, 'User not found');
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            stats: user.stats
+          }
+        }
+      });
+    } catch (error) {
+      throw new ApiError(500, 'Error fetching user profile');
+    }
+  }
+
+  // Update user profile
+  static async updateProfile(req: Request, res: Response) {
+    try {
+      const { username } = req.body;
+      
+      if (!req.user?.userId) {
+        throw new ApiError(401, 'User not authenticated');
+      }
+      
+      // Validate username
+      if (username) {
+        const existingUser = await User.findOne({ 
+          username, 
+          _id: { $ne: req.user.userId } 
+        });
+        
+        if (existingUser) {
+          throw new ApiError(400, 'Username already taken');
+        }
+      }
+
+      const user = await User.findByIdAndUpdate(
+        req.user.userId,
+        { $set: { username } },
+        { new: true }
+      );
+
+      if (!user) {
+        throw new ApiError(404, 'User not found');
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            stats: user.stats
+          }
+        }
+      });
+    } catch (error) {
+      throw new ApiError(500, 'Error updating user profile');
+    }
+  }
+}

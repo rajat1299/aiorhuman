@@ -10,15 +10,15 @@ interface SocketContextType {
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, token } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      const token = localStorage.getItem('token');
-      const newSocket = io('http://localhost:5001', {
+    if (isAuthenticated && token) {
+      const newSocket = io('http://localhost:3000', {
         auth: { token },
+        transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
@@ -26,7 +26,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       newSocket.on('connect', () => {
-        console.log('Socket connected');
+        console.log('Socket connected with ID:', newSocket.id);
         setIsConnected(true);
       });
 
@@ -35,13 +35,21 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsConnected(false);
       });
 
+      newSocket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+        setIsConnected(false);
+      });
+
+      newSocket.connect();
       setSocket(newSocket);
 
       return () => {
-        newSocket.close();
+        newSocket.disconnect();
+        setSocket(null);
+        setIsConnected(false);
       };
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, token]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>

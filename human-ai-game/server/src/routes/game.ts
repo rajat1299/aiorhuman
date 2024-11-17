@@ -1,20 +1,13 @@
-// src/routes/game.ts
-
-import express, { Router, Request, Response } from 'express';
-import { auth } from '../middleware/auth';
-import {
-  getGameHistory,
-  getLeaderboard,
-  getCurrentGame,
-  getGameStats,
-} from '../controllers/gameController';
+import { Router } from 'express';
+import { GameController } from '../controllers/gameController';
+import { authenticate } from '../middleware/auth';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-// Use auth middleware for protected routes
-router.get('/history', auth as express.RequestHandler, getGameHistory as express.RequestHandler);
-router.get('/leaderboard', getLeaderboard as express.RequestHandler);
-router.get('/current', auth as express.RequestHandler, getCurrentGame as express.RequestHandler);
-router.get('/stats', auth as express.RequestHandler, getGameStats as express.RequestHandler);
+router.get('/history', authenticate, asyncHandler(GameController.getHistory));
+router.get('/current', authenticate, asyncHandler(GameController.getCurrentGame));
+router.get('/leaderboard', authenticate, asyncHandler(GameController.getLeaderboard));
+router.get('/stats', authenticate, asyncHandler(GameController.getStats));
 
-export default router;
+export default router; 

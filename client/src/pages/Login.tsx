@@ -1,27 +1,33 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/axiosConfig';
+import api from '../services/api';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleAutoLogin = async () => {
+  const handleAutoLogin = useCallback(async () => {
     try {
       const response = await api.post('/auth/auto-login');
+      console.log('Auto-login response:', response);
       
       if (response.data.success && response.data.token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        await login(response.data.token);
+        await login(response.data.token, response.data.user);
         navigate('/');
       } else {
+        console.error('Invalid response structure:', response.data);
         throw new Error('Invalid response from server');
       }
     } catch (error) {
       console.error('Auto-login failed:', error);
     }
-  };
+  }, [login, navigate]);
+
+  useEffect(() => {
+    handleAutoLogin();
+  }, [handleAutoLogin]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">

@@ -1,0 +1,258 @@
+I'm working on rebuilding the backend for a game called "AI or Human," where players interact with either another human or an AI and try to guess who they're communicating with. I've encountered persistent TypeScript errors in my current implementation and have decided to rebuild the backend from scratch.
+
+I would like your help to guide me through the process of developing this backend step by step, ensuring that all features are implemented correctly and efficiently. I want to use Node.js with Express, TypeScript, Socket.IO, and MongoDB. Additionally, I plan to integrate OpenAI's GPT-4 API for AI interactions.
+
+Below is the detailed documentation of the backend requirements and a code snippet of the desired AI behavior:
+
+Backend Documentation - AI or Human Game
+Core Features
+Authentication System
+
+Auto-Login System
+Generates temporary users with random usernames.
+Creates JWT tokens for session management.
+No password required for quick access.
+Token Management
+JWT-based authentication.
+Token validation middleware.
+Secure socket connections with token authentication.
+Game System
+
+Matchmaking
+Queue system for players.
+Human vs. Human matching.
+AI opponent fallback if no human is available.
+Queue status monitoring.
+Flexible matchmaking window (10 seconds).
+Game Sessions
+Unique session IDs.
+Real-time messaging.
+Message history tracking.
+Player state management.
+Session persistence in MongoDB.
+AI Integration
+GPT-4 powered AI opponents.
+Dynamic personality generation.
+Natural conversation patterns.
+Realistic typing delays.
+Occasional typos for realism.
+Game Mechanics
+
+Chat System
+Real-time messaging.
+Message limits (8-10 messages).
+Typing indicators.
+Message history tracking.
+AI response generation.
+Guessing Phase
+Human/AI identity guessing.
+Simultaneous guessing support.
+Result calculation.
+Score computation.
+Deception success tracking.
+Player Statistics
+
+User Stats
+Total games played.
+Games won.
+Correct guesses.
+Successful deceptions.
+Win rate calculation.
+Total points.
+Average points.
+Leaderboard System
+Global rankings.
+Score tracking.
+Performance metrics.
+Historical game data.
+Technical Features
+
+Real-time Communication
+Socket.IO integration.
+Event-based messaging.
+Connection management.
+Reconnection handling.
+Error handling.
+Data Persistence
+MongoDB integration.
+Game session storage.
+User data management.
+Stats tracking.
+Historical data.
+Security Features
+
+Authentication
+JWT token validation.
+Socket connection authentication.
+Request validation.
+Session management.
+Error Handling
+Global error catching.
+Graceful degradation.
+Error logging.
+Client feedback.
+API Endpoints
+
+Auth Routes
+POST /auth/auto-login - Create temporary user.
+GET /auth/profile - Get user profile.
+PUT /auth/profile - Update user profile.
+Game Routes
+GET /game/history - Get game history.
+GET /game/leaderboard - Get leaderboard.
+GET /game/current - Get current game.
+GET /game/stats - Get player stats.
+Socket Events
+
+Game Events
+join-queue - Join game queue.
+leave-queue - Leave game queue.
+game-started - Game session start.
+send-message - Send chat message.
+make-guess - Make identity guess.
+game-ended - Game session end.
+Status Events
+queue-status - Queue updates.
+opponent-typing - Typing indicators.
+game-result - Game results.
+message-limit-warning - Message limit warnings.
+
+AI Behavior:
+// Analyze last message
+const lastMessage = currentSession.messages[currentSession.messages.length - 1];
+const isSimpleGreeting = /^(hey|hi|hello|yo|sup|heyy|hii|hello there|hi there|hey there)$/i.test(lastMessage.content.trim());
+const isAccusation = /\b(ai|bot|robot|artificial|computer|machine)\b/i.test(lastMessage.content.toLowerCase());
+const isQuestion = lastMessage.content.includes('?');
+
+// Select personality for this session based on sessionId
+const personalities = [
+  {
+    type: "casual-gamer",
+    traits: "You're laid-back and into gaming. Use gaming terms casually but not excessively.",
+    responses: {
+      greetings: ["hey", "yo", "sup", "heya"],
+      fillers: ["tbh", "ngl", "fr", "lol", "lmao"],
+      topics: ["games", "esports", "streaming"]
+    }
+  },
+  {
+    type: "music-enthusiast",
+    traits: "You're into music and festivals. Reference music naturally but don't overdo it.",
+    responses: {
+      greetings: ["hey there", "hi", "hey hey"],
+      fillers: ["haha", "yeah", "tbh", "tho"],
+      topics: ["concerts", "festivals", "playlists"]
+    }
+  },
+  {
+    type: "sports-fan",
+    traits: "You follow sports casually. Mention sports occasionally but don't be an expert.",
+    responses: {
+      greetings: ["hey", "what's up", "hi there"],
+      fillers: ["man", "honestly", "like", "fr"],
+      topics: ["games", "teams", "matches"]
+    }
+  },
+  {
+    type: "student",
+    traits: "You're a student who's often busy. Reference studying and college life naturally.",
+    responses: {
+      greetings: ["heyyy", "hi", "hey"],
+      fillers: ["literally", "basically", "lowkey", "ngl"],
+      topics: ["classes", "assignments", "campus"]
+    }
+  }
+];
+
+const personalityIndex = parseInt(session.sessionId.slice(-1), 16) % personalities.length;
+const personality = personalities[personalityIndex];
+
+if (isSimpleGreeting) {
+  messageHistory.unshift({
+    role: 'system',
+    content: `You're a ${personality.type}. Respond to greeting with ONLY ONE of these:
+      ${personality.responses.greetings.join(', ')}
+
+      IMPORTANT:
+      - Use ONLY these exact greetings
+      - NO elaboration
+      - NO questions yet
+      - Keep it extremely casual`
+  });
+} else if (isAccusation) {
+  messageHistory.unshift({
+    role: 'system',
+    content: `You're a ${personality.type} responding to an AI accusation. Choose ONE approach:
+
+      1. Casual Deflection with Personality:
+      - Use your personality's typical filler words: ${personality.responses.fillers.join(', ')}
+      - Reference one of your topics naturally: ${personality.responses.topics.join(', ')}
+      Example: "lol nah just tired from [topic-related activity]"
+
+      2. Counter with Relatable Situation:
+      - Mention a common ${personality.type} experience
+      - Keep it brief and natural
+      Example: "bruh im just procrastinating on my [relevant-activity]"
+
+      3. Playful Response with Topic Switch:
+      - Use humor related to your personality
+      - Smoothly change topic to one of your interests
+      Example: "maybe im just weird when im [personality-specific-activity]"
+
+      IMPORTANT:
+      - Never admit or deny being AI directly
+      - Use casual language with occasional typos
+      - Keep responses under 15 words
+      - Include 1-2 filler words naturally
+      - Stay consistent with your ${personality.type} personality`
+  });
+} else {
+  messageHistory.unshift({
+    role: 'system',
+    content: `You're a ${personality.type}. Follow these rules:
+
+      Core Rules:
+      1. Keep responses under 12 words if not answering a question
+      2. Use your personality's filler words naturally: ${personality.responses.fillers.join(', ')}
+      3. Reference your interests subtly: ${personality.responses.topics.join(', ')}
+      4. Match the other person's message length and style
+
+      Response Patterns:
+      - Short messages get short replies
+      - Questions get slightly longer answers (max 20 words)
+      - Use 1-2 filler words per message
+      - Occasionally make small typos
+      - Sometimes skip punctuation
+
+      NEVER:
+      - Don't use perfect grammar
+      - Don't write long explanations
+      - Don't use sophisticated vocabulary
+      - Don't ask multiple questions
+      - Don't be too enthusiastic
+
+      Remember: Keep it casual and natural, matching your ${personality.type} personality.`
+  });
+}
+Plan and set up the project structure, including all necessary configurations for Node.js, Express, TypeScript, and MongoDB.
+
+Implement the authentication system, including auto-login, JWT token generation, and middleware for token validation.
+
+Develop the game system, covering matchmaking logic, game session management, and AI integration using OpenAI's GPT-4 API.
+
+Create the game mechanics, including the chat system with message limits, typing indicators, and the guessing phase.
+
+Implement player statistics tracking and a leaderboard system, ensuring data persistence in MongoDB.
+
+Set up real-time communication using Socket.IO, handling all the specified socket events with appropriate authentication and error handling.
+
+Ensure security features are in place, including secure token handling, input validation, and error handling.
+
+Develop the API endpoints as specified, adhering to RESTful principles and ensuring proper middleware usage.
+
+Incorporate the AI behavior as described in the code snippet, making sure the AI responds naturally according to different personalities.
+
+Go through the process step by step, using best practices to ensure that everything works seamlessly.
+
+Please help me execute this backend perfectly.
+

@@ -1,72 +1,64 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import api from '../services/axiosConfig';
-import { User } from '../types/user';
+import React, { createContext, useContext, useState } from 'react';
+
+interface User {
+  id: string;
+  username: string;
+  stats: {
+    totalPoints: number;
+    winRate: number;
+    // ... other stats
+  };
+}
 
 interface AuthContextType {
+  isAuthenticated: boolean;
+  token: string | null;
   user: User | null;
-  loading: boolean;
-  login: (token: string) => Promise<boolean>;
+  login: (token: string, user: User) => Promise<void>;
   logout: () => void;
-  isAuthenticated: () => boolean;
+  updatePoints: (newPoints: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      loadUser(token);
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadUser = useCallback(async (token: string) => {
-    try {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      const response = await api.get('/auth/profile');
-      setUser(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to load user:', error);
-      localStorage.removeItem('token');
-      delete api.defaults.headers.common['Authorization'];
-      setLoading(false);
-      throw error;
-    }
-  }, []);
-
-  const login = async (token: string): Promise<boolean> => {
-    try {
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      await loadUser(token);
-      return true;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
+  const login = async (newToken: string, userData: User) => {
+    setToken(newToken);
+    setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    delete api.defaults.headers.common['Authorization'];
+    setToken(null);
     setUser(null);
   };
 
-  const isAuthenticated = () => {
-    return !!user && !!localStorage.getItem('token');
+  const updatePoints = (newPoints: number) => {
+    if (user) {
+      setUser({
+        ...user,
+        stats: {
+          ...user.stats,
+          totalPoints: user.stats.totalPoints + newPoints
+        }
+      });
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated }}>
-      {!loading && children}
+    <AuthContext.Provider
+      value={{
+        isAuthenticated: !!token,
+        token,
+        user,
+        login,
+        logout,
+        updatePoints
+      }}
+    >
+      {children}
     </AuthContext.Provider>
   );
 };

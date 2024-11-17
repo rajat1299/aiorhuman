@@ -1,36 +1,32 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 
 const Login: React.FC = () => {
-  const { login, isAuthenticated } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
 
-  const handleAutoLogin = async () => {
+  const handleLogin = async () => {
     try {
-      const response = await axios.post('http://localhost:5001/auth/auto-login');
+      const response = await api.post('/auth/auto-login');
       
       if (response.data.success) {
-        await login(response.data.token);
+        await login(response.data.token, response.data.user);
         navigate('/');
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (error) {
-      console.error('Auto-login failed:', error);
+      console.error('Login failed:', error);
     }
   };
-
-  useEffect(() => {
-    handleAutoLogin();
-  }, []);
 
   return (
     <div className="flex items-center justify-center min-h-[80vh]">
@@ -41,7 +37,7 @@ const Login: React.FC = () => {
         </p>
         <div className="text-center">
           <button
-            onClick={handleAutoLogin}
+            onClick={handleLogin}
             className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold"
           >
             Start Playing

@@ -40,15 +40,20 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
+  // Function to handle navigation
+  const handleStartPlaying = () => {
+    navigate(isAuthenticated ? '/game' : '/login');
+  };
+
   return (
     <div className="min-h-[90vh] flex flex-col items-center justify-center px-4 relative overflow-hidden bg-game-dark pt-24">
-      {/* Enhanced Background Layers */}
+      {/* Background Layers */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-game-dark-800 via-game-dark to-game-dark-600 opacity-90" />
         <div className="absolute inset-0 bg-[url('../assets/grid-pattern.svg')] opacity-5" />
         <div className="absolute inset-0 bg-gradient-radial from-game-primary/10 via-transparent to-transparent animate-pulse-slow" />
         
-        {/* Enhanced Floating Particles */}
+        {/* Floating Particles */}
         <div className="absolute inset-0 overflow-hidden">
           {[...Array(30)].map((_, i) => (
             <div
@@ -67,7 +72,7 @@ const Home: React.FC = () => {
       
       {/* Hero Content */}
       <div className="relative z-10 max-w-4xl mx-auto text-center">
-        {/* Main Title with Enhanced Gradient Animation */}
+        {/* Main Title */}
         <div className="mb-16 animate-fadeIn">
           <h1 className="text-7xl font-extrabold mb-6 relative">
             <span className="bg-gradient-to-r from-game-primary via-game-secondary to-game-primary-light bg-clip-text text-transparent bg-300% animate-gradient inline-block transform hover:scale-105 transition-transform duration-300">
@@ -88,10 +93,10 @@ const Home: React.FC = () => {
           </p>
         </div>
 
-        {/* Enhanced CTA Button */}
+        {/* CTA Button */}
         <div className="mb-20 animate-fadeIn animation-delay-300">
           <button
-            onClick={() => navigate(isAuthenticated() ? '/game' : '/login')}
+            onClick={handleStartPlaying}
             className="group relative px-10 py-5 bg-gradient-to-r from-game-primary to-game-secondary text-white text-xl font-bold rounded-lg transform transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] focus:outline-none focus:ring-2 focus:ring-game-primary-light focus:ring-opacity-50 overflow-hidden"
           >
             <span className="relative z-10 flex items-center justify-center">
@@ -105,7 +110,7 @@ const Home: React.FC = () => {
           </button>
         </div>
 
-        {/* Enhanced Feature Grid */}
+        {/* Feature Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 animate-fadeIn animation-delay-500">
           {features.map((feature, index) => (
             <div
@@ -113,26 +118,20 @@ const Home: React.FC = () => {
               className="group relative bg-game-dark-600/30 backdrop-blur-md p-8 rounded-xl transform transition-all duration-300 hover:scale-105 hover:bg-game-dark-600/50 border border-game-dark-300/10 hover:border-game-primary/20"
               style={{ animationDelay: `${index * 150}ms` }}
             >
-              {/* Glow Effect */}
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-game-primary/0 via-game-primary/5 to-game-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              {/* Icon with Animation */}
               <div className={`text-game-${feature.color} mb-6 transform group-hover:scale-110 transition-transform duration-300`}>
                 {feature.icon}
               </div>
-              
               <h3 className="text-xl font-bold text-game-light mb-3">{feature.title}</h3>
               <p className="text-game-light-400 group-hover:text-game-light-600 transition-colors duration-300">
                 {feature.description}
               </p>
-              
-              {/* Shine Effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 animate-shine" />
             </div>
           ))}
         </div>
 
-        {/* Enhanced How to Play Section */}
+        {/* How to Play Section */}
         <div className="bg-game-dark-600/50 backdrop-blur-sm p-12 rounded-xl border border-game-dark-400/50 animate-fadeIn animation-delay-700 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-game-primary/5 to-transparent" />
           <h2 className="text-3xl font-bold text-game-primary mb-12 relative">How to Play</h2>
