@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.6.4"
+  }
+} 
