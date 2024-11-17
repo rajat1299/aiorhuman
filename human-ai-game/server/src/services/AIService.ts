@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { IGame } from '../models/Game';
-import config from '../config/config';
+import { config } from '../config/config';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
 
 export class AIService {
