@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://human-or-ai.onrender.com/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
