@@ -38,7 +38,7 @@ mongoose.connect(config.mongodbUri!, {
 // Initialize Socket.IO
 const io = new Server(httpServer, {
   cors: {
-    origin: config.corsOrigin,
+    origin: config.corsOrigin.replace(/\/$/, ''),
     methods: ['GET', 'POST'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -55,7 +55,7 @@ const io = new Server(httpServer, {
 app.use(helmet());
 app.use(compression());
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: config.corsOrigin.replace(/\/$/, ''),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']

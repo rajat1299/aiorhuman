@@ -17,8 +17,7 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN || 'https://aiorhuman-six.vercel.app',
   sessionTimeout: parseInt(process.env.SESSION_TIMEOUT || '1800000'),
   matchmakingTimeout: parseInt(process.env.MATCHMAKING_TIMEOUT || '10000'),
-  maxMessagesPerGame: parseInt(process.env.MAX_MESSAGES_PER_GAME || '10'),
-  environment: process.env.NODE_ENV || 'production'
+  maxMessagesPerGame: parseInt(process.env.MAX_MESSAGES_PER_GAME || '10')
 };
 
 // Validate required environment variables
