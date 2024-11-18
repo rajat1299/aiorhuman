@@ -2,74 +2,42 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
-interface SocketContextType {
-  socket: Socket | null;
-  isConnected: boolean;
-}
-
-const SocketContext = createContext<SocketContextType | undefined>(undefined);
+const SocketContext = createContext<Socket | null>(null);
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, token } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated && token) {
-      const newSocket = io('http://localhost:3000', {
-        auth: { token },
-        transports: ['websocket'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000
-      });
+    if (!token) return;
 
-      newSocket.on('connect', () => {
-        console.log('Socket connected with ID:', newSocket.id);
-        setIsConnected(true);
-      });
+    // Use environment variable for socket URL
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'https://human-or-ai.onrender.com';
+    
+    const newSocket = io(socketUrl, {
+      auth: { token },
+      transports: ['websocket'],
+      withCredentials: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
 
-      newSocket.on('disconnect', () => {
-        console.log('Socket disconnected');
-        setIsConnected(false);
-      });
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
 
-      newSocket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-        setIsConnected(false);
-      });
+    setSocket(newSocket);
 
-      newSocket.connect();
-      setSocket(newSocket);
-
-      return () => {
-        newSocket.disconnect();
-        setSocket(null);
-        setIsConnected(false);
-      };
-    }
-  }, [isAuthenticated, token]);
+    return () => {
+      newSocket.close();
+    };
+  }, [token]);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
+    <SocketContext.Provider value={socket}>
       {children}
     </SocketContext.Provider>
   );
 };
 
-export const useSocket = () => {
-  const context = useContext(SocketContext);
-  if (context === undefined) {
-    throw new Error('useSocket must be used within a SocketProvider');
-  }
-  return context.socket;
-};
-
-export const useSocketConnection = () => {
-  const context = useContext(SocketContext);
-  if (context === undefined) {
-    throw new Error('useSocketConnection must be used within a SocketProvider');
-  }
-  return context.isConnected;
-}; 
+export const useSocket = () => useContext(SocketContext); 
